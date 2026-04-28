@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>代码仓库 RAG 助手</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --bg-soft: #eef5f3;
+      --surface: #ffffff;
+      --surface-strong: #f8fafc;
+      --line: #dce3ec;
+      --line-strong: #c7d1de;
+      --text: #162033;
+      --muted: #657489;
+      --muted-strong: #475569;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --primary-soft: #dff5f1;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --green: #15803d;
+      --green-soft: #dcfce7;
+      --amber: #b45309;
+      --amber-soft: #fef3c7;
+      --red: #b42318;
+      --red-soft: #fee4e2;
+      --code-bg: #0f172a;
+      --code-text: #dbeafe;
+      --shadow: 0 18px 45px rgba(15, 23, 42, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(135deg, rgba(223, 245, 241, .9), rgba(244, 247, 251, 0) 34%),
+        linear-gradient(315deg, rgba(219, 234, 254, .85), rgba(244, 247, 251, 0) 38%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .58;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 13px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(15, 118, 110, .55);
+      box-shadow: 0 0 0 4px rgba(15, 118, 110, .12);
+    }
+
+    textarea {
+      min-height: 148px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .app-shell {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 22px 0 32px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(220, 227, 236, .86);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .84);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 22px rgba(15, 118, 110, .22);
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .sidebar, .workspace {
+      min-width: 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid rgba(220, 227, 236, .9);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .92);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 0;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .panel-note {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .panel-body {
+      padding: 16px 18px 18px;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--primary), var(--blue));
+      color: #fff;
+      box-shadow: 0 10px 22px rgba(15, 118, 110, .18);
+    }
+
+    .secondary-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted-strong);
+    }
+
+    .example-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .example {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      color: var(--text);
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .example span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status-box {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: var(--muted-strong);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 48px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .metric-value {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .metric-label {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status-label::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-pending {
+      background: #f8fafc;
+      color: #64748b;
+      border-color: #e2e8f0;
+    }
+
+    .status-indexing {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: #bfdbfe;
+    }
+
+    .status-ready {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: #bbf7d0;
+    }
+
+    .status-failed {
+      background: var(--red-soft);
+      color: var(--red);
+      border-color: #fecaca;
+    }
+
+    .status-idle {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: #fde68a;
+    }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .field-action {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+      gap: 18px;
+    }
+
+    .answer-box {
+      min-height: 190px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      color: var(--text);
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .impact-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .impact-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px;
+      background: #fff;
+    }
+
+    .impact-item h3 {
+      margin-bottom: 8px;
+      color: var(--muted-strong);
+      font-size: 12px;
+    }
+
+    .impact-item p, .impact-item li {
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .impact-item ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .citation-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .citation-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .citation {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .citation-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(220, 227, 236, .78);
+      background: var(--surface-strong);
+    }
+
+    .path {
+      min-width: 0;
+      color: var(--muted-strong);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .score {
+      flex: 0 0 auto;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 300px;
+      padding: 14px;
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .error {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1180px) {
+      .layout, .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        order: 0;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .app-shell {
+        width: min(100% - 24px, 1480px);
+        padding-top: 12px;
+      }
+
+      .topbar, .work-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .work-grid {
+        display: grid;
+      }
+
+      .actions, .field-action {
+        justify-content: stretch;
+      }
+
+      .actions button, .field-action button {
+        flex: 1 1 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">RAG</div>
+        <div>
+          <h1>代码仓库 RAG 助手</h1>
+          <p class="subtitle">面向后端项目演示的仓库索引、代码检索与变更影响分析工作台</p>
+        </div>
+      </div>
+      <div class="top-meta">
+        <span id="repo-id-label" class="status-label status-idle">还没有索引仓库</span>
+        <span id="repo-status-label" class="status-label status-idle">未开始</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar stack">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">仓库索引</h2>
+              <p class="panel-note">输入公开 GitHub 仓库地址，后端会下载代码并写入 pgvector。</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <label class="label" for="repo-url">GitHub 仓库地址</label>
+            <input id="repo-url" value="https://github.com/1KURA-hub/course-select" autocomplete="off">
+            <div class="actions" style="margin-top: 12px;">
+              <button id="index-btn" class="primary-btn">开始索引</button>
+              <button id="refresh-btn" class="secondary-btn" type="button">刷新状态</button>
+            </div>
+            <div id="repo-status" class="status-box">可以导入一个公开 GitHub 仓库。</div>
+            <div class="metric-grid">
+              <div class="metric">
+                <div id="file-count" class="metric-value">0</div>
+                <div class="metric-label">扫描文件</div>
+              </div>
+              <div class="metric">
+                <div id="chunk-count" class="metric-value">0</div>
+                <div class="metric-label">代码分片</div>
+              </div>
+              <div class="metric">
+                <div id="index-duration" class="metric-value">0s</div>
+                <div class="metric-label">索引耗时</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">快捷测试</h2>
+              <p class="panel-note">用于验证检索能否命中后端关键链路。</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="example-list">
+              <button class="example" data-question="这个项目的消息消费主流程是什么？">消费流程 <span>MQ</span></button>
+              <button class="example" data-question="这个项目里的 Redis Stream 转发逻辑是怎么工作的？">Stream 转发 <span>Redis</span></button>
+              <button class="example" data-question="这个项目最终在哪里保证幂等性？">幂等性 <span>业务一致性</span></button>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="workspace stack">
+        <div class="work-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">代码问答</h2>
+                <p class="panel-note">问题会先转成检索请求，再基于命中的代码片段生成回答。</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <label class="label" for="question">问题</label>
+              <textarea id="question">这个项目的消息消费主流程是什么？</textarea>
+              <div class="field-action">
+                <button id="ask-btn" class="primary-btn">提问</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">变更影响分析</h2>
+                <p class="panel-note">粘贴 git diff，系统检索相关代码并生成风险与测试建议。</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <label class="label" for="diff-text">Diff 内容</label>
+              <textarea id="diff-text">diff --git a/mq/consumer.go b/mq/consumer.go
+--- a/mq/consumer.go
++++ b/mq/consumer.go
+@@ -1,3 +1,3 @@
+- old retry behavior
++ new retry behavior</textarea>
+              <div class="field-action">
+                <button id="impact-btn" class="primary-btn">分析影响</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="result-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">分析结果</h2>
+                <p class="panel-note">问答结果或变更影响报告会显示在这里。</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="result" class="answer-box">暂无结果。</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">引用代码片段</h2>
+                <p class="panel-note">展示向量检索命中的文件路径、行号、相似度和代码。</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="citations" class="empty">暂无引用。</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let currentRepoID = 0;
+    let currentRepoStatus = "";
+    const repoStatus = document.getElementById("repo-status");
+    const result = document.getElementById("result");
+    const citations = document.getElementById("citations");
+    const repoLabel = document.getElementById("repo-id-label");
+    const repoStatusLabel = document.getElementById("repo-status-label");
+    const fileCount = document.getElementById("file-count");
+    const chunkCount = document.getElementById("chunk-count");
+    const indexDuration = document.getElementById("index-duration");
+    const indexButton = document.getElementById("index-btn");
+    const askButton = document.getElementById("ask-btn");
+    const impactButton = document.getElementById("impact-btn");
+
+    async function request(path, body) {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const json = await readJSON(response);
+      if (!response.ok) throw new Error(json.error || `请求失败，HTTP ${response.status}`);
+      return json;
+    }
+
+    async function readJSON(response) {
+      const text = await response.text();
+      if (!text) {
+        if (!response.ok) throw new Error(`服务端返回空响应，HTTP ${response.status}`);
+        return {};
+      }
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        throw new Error(`服务端返回的不是 JSON：${text.slice(0, 120)}`);
+      }
+    }
+
+    function renderCitations(items) {
+      citations.innerHTML = "";
+      if (!items || items.length === 0) {
+        citations.className = "empty";
+        citations.textContent = "暂无引用。";
+        return;
+      }
+      citations.className = "";
+
+      const summary = document.createElement("div");
+      summary.className = "citation-summary";
+      summary.innerHTML = `<span>共检索到 ${items.length} 个代码片段</span><span>RAG Evidence</span>`;
+
+      const list = document.createElement("div");
+      list.className = "citation-list";
+      for (const item of items) {
+        const wrap = document.createElement("article");
+        wrap.className = "citation";
+
+        const head = document.createElement("div");
+        head.className = "citation-head";
+
+        const path = document.createElement("div");
+        path.className = "path";
+        const symbol = item.symbol_name ? ` · ${item.symbol_name}` : "";
+        path.title = `${item.file_path}:${item.start_line}-${item.end_line}${symbol}`;
+        path.textContent = `${item.file_path}:${item.start_line}-${item.end_line}${symbol}`;
+
+        const score = document.createElement("div");
+        score.className = "score";
+        score.textContent = `score ${formatScore(item.score)}`;
+
+        const pre = document.createElement("pre");
+        pre.textContent = item.content;
+
+        head.append(path, score);
+        wrap.append(head, pre);
+        list.appendChild(wrap);
+      }
+      citations.append(summary, list);
+    }
+
+    function renderImpact(data) {
+      const root = document.createElement("div");
+      root.className = "impact-grid";
+
+      root.appendChild(impactSection("变更总结", data.summary || "暂无总结。"));
+      root.appendChild(impactList("影响模块", data.impacted_modules));
+      root.appendChild(impactList("风险点", data.risks));
+      root.appendChild(impactList("建议测试", data.suggested_tests));
+
+      result.innerHTML = "";
+      result.appendChild(root);
+    }
+
+    function impactSection(title, text) {
+      const node = document.createElement("section");
+      node.className = "impact-item";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const body = document.createElement("p");
+      body.textContent = text;
+      node.append(heading, body);
+      return node;
+    }
+
+    function impactList(title, items) {
+      const node = document.createElement("section");
+      node.className = "impact-item";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      node.appendChild(heading);
+
+      if (!items || items.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "暂无。";
+        node.appendChild(empty);
+        return node;
+      }
+
+      const list = document.createElement("ul");
+      for (const item of items) {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      }
+      node.appendChild(list);
+      return node;
+    }
+
+    async function refreshRepo() {
+      if (!currentRepoID) return;
+      const response = await fetch(`/api/repos/${currentRepoID}`);
+      const json = await readJSON(response);
+      if (!response.ok) throw new Error(json.error || `刷新失败，HTTP ${response.status}`);
+      updateRepositoryState(json);
+    }
+
+    function updateRepositoryState(repo) {
+      currentRepoID = repo.id || currentRepoID;
+      currentRepoStatus = repo.status || "";
+      repoStatus.textContent = `仓库 #${currentRepoID}: ${renderStatus(currentRepoStatus)}${repo.error_message ? " - " + repo.error_message : ""}`;
+      repoLabel.textContent = `仓库 #${currentRepoID}`;
+      fileCount.textContent = repo.file_count || 0;
+      chunkCount.textContent = repo.chunk_count || 0;
+      indexDuration.textContent = formatDuration(repo.index_duration_ms || 0);
+      setStatusBadge(currentRepoStatus);
+      syncIndexButton();
+    }
+
+    function setStatusBadge(status) {
+      repoStatusLabel.className = `status-label ${statusClass(status)}`;
+      repoStatusLabel.textContent = renderStatus(status || "idle");
+      repoLabel.className = "status-label status-idle";
+    }
+
+    function syncIndexButton() {
+      const locked = currentRepoStatus === "pending" || currentRepoStatus === "indexing";
+      indexButton.disabled = locked;
+      delete indexButton.dataset.originalText;
+      if (locked) {
+        indexButton.textContent = "索引中...";
+      } else if (currentRepoID) {
+        indexButton.textContent = "重新索引";
+      } else {
+        indexButton.textContent = "开始索引";
+      }
+    }
+
+    function renderStatus(status) {
+      const map = {
+        idle: "未开始",
+        pending: "等待索引",
+        indexing: "索引中",
+        ready: "已就绪",
+        failed: "索引失败"
+      };
+      return map[status] || status;
+    }
+
+    function statusClass(status) {
+      const map = {
+        pending: "status-pending",
+        indexing: "status-indexing",
+        ready: "status-ready",
+        failed: "status-failed"
+      };
+      return map[status] || "status-idle";
+    }
+
+    function formatScore(score) {
+      if (typeof score !== "number" || Number.isNaN(score)) return "--";
+      return score.toFixed(3);
+    }
+
+    function formatDuration(ms) {
+      if (!ms) return "0s";
+      if (ms < 1000) return `${ms}ms`;
+      return `${(ms / 1000).toFixed(1)}s`;
+    }
+
+    function setBusy(button, busy, text) {
+      button.disabled = busy;
+      if (busy) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = text;
+        return;
+      }
+      if (button.dataset.originalText) {
+        button.textContent = button.dataset.originalText;
+        delete button.dataset.originalText;
+      }
+    }
+
+    document.getElementById("index-btn").onclick = async () => {
+      try {
+        setBusy(indexButton, true, "创建中...");
+        repoStatus.textContent = "正在创建索引任务...";
+        setStatusBadge("pending");
+        const repo = await request("/api/repos", { repo_url: document.getElementById("repo-url").value });
+        updateRepositoryState(repo);
+        await refreshRepo();
+      } catch (err) {
+        repoStatus.innerHTML = `<span class="error">${err.message}</span>`;
+        currentRepoStatus = "failed";
+        setStatusBadge("failed");
+      } finally {
+        syncIndexButton();
+      }
+    };
+
+    document.getElementById("refresh-btn").onclick = async () => {
+      try {
+        await refreshRepo();
+      } catch (err) {
+        repoStatus.innerHTML = `<span class="error">${err.message}</span>`;
+      }
+    };
+
+    setInterval(() => {
+      refreshRepo().catch((err) => {
+        repoStatus.innerHTML = `<span class="error">${err.message}</span>`;
+      });
+    }, 3000);
+
+    document.querySelectorAll(".example").forEach((btn) => {
+      btn.onclick = () => { document.getElementById("question").value = btn.dataset.question; };
+    });
+
+    document.getElementById("ask-btn").onclick = async () => {
+      try {
+        if (!currentRepoID) throw new Error("请先索引一个仓库。");
+        setBusy(askButton, true, "生成中...");
+        result.className = "answer-box";
+        result.textContent = "正在生成回答...";
+        const data = await request("/api/ask", {
+          repository_id: currentRepoID,
+          question: document.getElementById("question").value
+        });
+        result.textContent = data.answer || "暂无回答。";
+        renderCitations(data.citations);
+      } catch (err) {
+        result.textContent = err.message;
+      } finally {
+        setBusy(askButton, false);
+      }
+    };
+
+    document.getElementById("impact-btn").onclick = async () => {
+      try {
+        if (!currentRepoID) throw new Error("请先索引一个仓库。");
+        setBusy(impactButton, true, "分析中...");
+        result.className = "answer-box";
+        result.textContent = "正在分析影响...";
+        const data = await request("/api/impact", {
+          repository_id: currentRepoID,
+          diff_text: document.getElementById("diff-text").value
+        });
+        renderImpact(data);
+        renderCitations(data.citations);
+      } catch (err) {
+        result.textContent = err.message;
+      } finally {
+        setBusy(impactButton, false);
+      }
+    };
+  </script>
+</body>
+</html>

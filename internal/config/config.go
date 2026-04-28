@@ -1,0 +1,60 @@
+package config
+
+import (
+	"os"
+	"strconv"
+	"time"
+)
+
+type Config struct {
+	Port              string
+	PostgresDSN       string
+	WorkDir           string
+	EmbeddingDim      int
+	ChunkMaxLines     int
+	ChunkOverlapLines int
+	TopK              int
+	MaxRepoBytes      int64
+	GitHubTimeout     time.Duration
+	OpenAIBaseURL     string
+	OpenAIAPIKey      string
+	OpenAIModel       string
+	EmbeddingModel    string
+}
+
+func Load() Config {
+	return Config{
+		Port:              getenv("PORT", "8090"),
+		PostgresDSN:       getenv("POSTGRES_DSN", "host=127.0.0.1 user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"),
+		WorkDir:           getenv("WORK_DIR", "./tmp/repos"),
+		EmbeddingDim:      getenvInt("EMBEDDING_DIM", 128),
+		ChunkMaxLines:     getenvInt("CHUNK_MAX_LINES", 80),
+		ChunkOverlapLines: getenvInt("CHUNK_OVERLAP_LINES", 12),
+		TopK:              getenvInt("TOP_K", 8),
+		MaxRepoBytes:      int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
+		GitHubTimeout:     time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
+		OpenAIBaseURL:     getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		OpenAIAPIKey:      os.Getenv("OPENAI_API_KEY"),
+		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),
+		EmbeddingModel:    getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+	}
+}
+
+func getenv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func getenvInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
