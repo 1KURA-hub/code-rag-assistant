@@ -46,6 +46,7 @@ const statusText = {
 
 const defaultQuestion = "这个项目的消息消费主流程是什么？";
 const repoIDStorageKey = "code-rag-assistant.repo-id";
+const defaultRepoID = "1";
 
 function App() {
   const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
@@ -70,10 +71,11 @@ function App() {
   const canAsk = repo?.id && repo?.status === "ready";
 
   useEffect(() => {
-    const savedRepoID = window.localStorage.getItem(repoIDStorageKey);
-    if (!savedRepoID) return;
+    const savedRepoID = window.localStorage.getItem(repoIDStorageKey) || defaultRepoID;
+    setStatusMessage("正在加载已索引仓库...");
     refreshRepo(savedRepoID).catch(() => {
       window.localStorage.removeItem(repoIDStorageKey);
+      setStatusMessage("请先导入一个公开 GitHub 仓库。");
     });
   }, []);
 
@@ -171,10 +173,21 @@ function App() {
     const value = input.trim();
     if (!value) return;
     let activeRepo = repo;
+    if (!activeRepo?.id) {
+      try {
+        activeRepo = await fetchRepo(window.localStorage.getItem(repoIDStorageKey) || defaultRepoID);
+        setRepo(activeRepo);
+        setRepoURL(activeRepo.repo_url || repoURL);
+        window.localStorage.setItem(repoIDStorageKey, String(activeRepo.id));
+      } catch (err) {
+        setStatusMessage(err.message);
+      }
+    }
     if (activeRepo?.id && activeRepo.status !== "ready") {
       try {
         activeRepo = await fetchRepo(activeRepo.id);
         setRepo(activeRepo);
+        setRepoURL(activeRepo.repo_url || repoURL);
       } catch (err) {
         setStatusMessage(err.message);
       }
