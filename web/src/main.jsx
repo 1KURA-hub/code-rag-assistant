@@ -55,6 +55,19 @@ function createMessageID() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function useEscape(handler, enabled = true) {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        handler(event);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handler, enabled]);
+}
+
 function App() {
   const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
   const [repo, setRepo] = useState(null);
@@ -419,6 +432,8 @@ function App() {
 }
 
 function AboutDialog({ onClose }) {
+  useEscape(onClose);
+
   return (
     <div className="about-layer">
       <button className="about-scrim" onClick={onClose} aria-label="关闭项目介绍" />
@@ -612,9 +627,29 @@ function EvidenceDrawer({ citations, intent, open, size, onSizeChange, onClose }
     setPreviewItem(null);
   }, [citations]);
 
+  useEscape(() => {
+    if (previewItem) {
+      setPreviewItem(null);
+      return;
+    }
+    if (fullscreen || size === "wide") {
+      onSizeChange("normal");
+      return;
+    }
+    onClose();
+  }, open);
+
+  function closeOneLevel() {
+    if (fullscreen || size === "wide") {
+      onSizeChange("normal");
+      return;
+    }
+    onClose();
+  }
+
   return (
     <>
-      <button className={`drawer-scrim ${open ? "open" : ""}`} onClick={onClose} aria-label="关闭代码依据" />
+      <button className={`drawer-scrim ${open ? "open" : ""}`} onClick={closeOneLevel} aria-label="返回上一级" />
       <aside className={`evidence-drawer ${open ? "open" : ""} evidence-${size}`}>
         <div className="evidence-header">
           <div>
