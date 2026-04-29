@@ -166,22 +166,23 @@ func uniquePaths(citations []Citation, limit int) []string {
 }
 
 func impactSystemPrompt() string {
-	return "You are a senior engineer reviewing a code change. Use only the provided snippets. Return concise impact analysis: summary, impacted modules, risks, and suggested tests."
+	return "你是一名后端代码审查讲解助手。必须使用中文回答。语言要简单、直接，不要写长篇 Markdown，不要使用大量加粗、标题、分割线或项目符号。只能依据 diff 和提供的代码片段分析，不要编造不存在的调用链。回答格式固定为四段：这次变更大概影响什么；可能的风险；建议怎么测试；代码依据。"
 }
 
 func impactUserPrompt(diffText string, citations []Citation) string {
 	var b strings.Builder
-	b.WriteString("Change or diff:\n")
+	b.WriteString("代码变更 diff：\n")
 	b.WriteString(diffText)
-	b.WriteString("\n\nRelated code snippets:\n")
-	for i, c := range citations {
+	b.WriteString("\n\n相关代码片段：\n")
+	for i, c := range promptCitations(citations) {
 		b.WriteString(fmt.Sprintf("\n[%d] %s:%d-%d", i+1, c.FilePath, c.StartLine, c.EndLine))
 		if c.SymbolName != "" {
-			b.WriteString(fmt.Sprintf(" symbol=%s type=%s", c.SymbolName, c.SymbolType))
+			b.WriteString(fmt.Sprintf(" 符号=%s 类型=%s", c.SymbolName, c.SymbolType))
 		}
 		b.WriteString("\n")
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
+	b.WriteString("\n请用中文输出。不要使用复杂 Markdown。每段尽量短，用简单语言说明。")
 	return b.String()
 }

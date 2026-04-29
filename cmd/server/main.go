@@ -45,6 +45,7 @@ func main() {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}))
 	handler.RegisterRoutes(router, ingest, answer, impact)
+	router.Static("/assets", "./static/assets")
 	router.StaticFile("/", "./static/index.html")
 
 	log.Printf("code-rag-assistant listening on http://127.0.0.1:%s", cfg.Port)
