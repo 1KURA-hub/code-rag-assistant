@@ -23,6 +23,12 @@ type Config struct {
 }
 
 func Load() Config {
+	openAIAPIKey := getenv("OPENAI_API_KEY", os.Getenv("DASHSCOPE_API_KEY"))
+	openAIBaseURL := getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+	if os.Getenv("OPENAI_BASE_URL") == "" && os.Getenv("OPENAI_API_KEY") == "" && os.Getenv("DASHSCOPE_API_KEY") != "" {
+		openAIBaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+	}
+
 	return Config{
 		Port:              getenv("PORT", "8090"),
 		PostgresDSN:       getenv("POSTGRES_DSN", "host=127.0.0.1 user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"),
@@ -33,8 +39,8 @@ func Load() Config {
 		TopK:              getenvInt("TOP_K", 8),
 		MaxRepoBytes:      int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
 		GitHubTimeout:     time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
-		OpenAIBaseURL:     getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-		OpenAIAPIKey:      os.Getenv("OPENAI_API_KEY"),
+		OpenAIBaseURL:     openAIBaseURL,
+		OpenAIAPIKey:      openAIAPIKey,
 		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),
 		EmbeddingModel:    getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
 	}
