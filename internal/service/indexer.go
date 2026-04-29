@@ -36,10 +36,7 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 	if err != nil {
 		return IndexStats{}, err
 	}
-	if err := i.db.WithContext(ctx).Where("repository_id = ?", repo.ID).Delete(&model.CodeChunk{}).Error; err != nil {
-		return IndexStats{}, err
-	}
-	chunkCount := 0
+	records := make([]*model.CodeChunk, 0, len(files)*2)
 	for _, file := range files {
 		chunks := ChunkSourceFile(file, i.cfg.ChunkMaxLines, i.cfg.ChunkOverlapLines)
 		for idx, chunk := range chunks {
@@ -60,15 +57,23 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 				Content:         chunk.Content,
 				EmbeddingVector: VectorLiteral(vector),
 			}
-			if err := i.db.WithContext(ctx).Create(record).Error; err != nil {
-				return IndexStats{}, err
-			}
-			chunkCount++
+			records = append(records, record)
 		}
+	}
+	if err := i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("repository_id = ?", repo.ID).Delete(&model.CodeChunk{}).Error; err != nil {
+			return err
+		}
+		if len(records) == 0 {
+			return nil
+		}
+		return tx.Create(&records).Error
+	}); err != nil {
+		return IndexStats{}, err
 	}
 	return IndexStats{
 		FileCount:       len(files),
-		ChunkCount:      chunkCount,
+		ChunkCount:      len(records),
 		IndexDurationMS: time.Since(started).Milliseconds(),
 	}, nil
 }
