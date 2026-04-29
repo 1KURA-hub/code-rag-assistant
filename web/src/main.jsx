@@ -45,6 +45,7 @@ const statusText = {
 };
 
 const defaultQuestion = "这个项目的消息消费主流程是什么？";
+const repoIDStorageKey = "code-rag-assistant.repo-id";
 
 function App() {
   const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
@@ -67,6 +68,14 @@ function App() {
   const currentStatus = repo?.status || "idle";
   const isIndexing = currentStatus === "pending" || currentStatus === "indexing";
   const canAsk = repo?.id && repo?.status === "ready";
+
+  useEffect(() => {
+    const savedRepoID = window.localStorage.getItem(repoIDStorageKey);
+    if (!savedRepoID) return;
+    refreshRepo(savedRepoID).catch(() => {
+      window.localStorage.removeItem(repoIDStorageKey);
+    });
+  }, []);
 
   useEffect(() => {
     if (!repo?.id) return;
@@ -125,12 +134,20 @@ function App() {
     }
   }
 
-  async function refreshRepo(repoID = repo?.id) {
+  async function fetchRepo(repoID) {
     if (!repoID) return;
     const response = await fetch(`/api/repos/${repoID}`);
     const json = await readJSON(response);
     if (!response.ok) throw new Error(json.error || `刷新失败，HTTP ${response.status}`);
+    return json;
+  }
+
+  async function refreshRepo(repoID = repo?.id) {
+    const json = await fetchRepo(repoID);
+    if (!json) return;
     setRepo(json);
+    setRepoURL(json.repo_url || repoURL);
+    window.localStorage.setItem(repoIDStorageKey, String(json.id));
     setStatusMessage(`仓库 #${json.id}: ${renderStatus(json.status)}${json.error_message ? " - " + json.error_message : ""}`);
   }
 
@@ -141,6 +158,7 @@ function App() {
       setStatusMessage("正在创建索引任务...");
       const nextRepo = await request("/api/repos", { repo_url: repoURL });
       setRepo(nextRepo);
+      window.localStorage.setItem(repoIDStorageKey, String(nextRepo.id));
       await refreshRepo(nextRepo.id);
     } catch (err) {
       setStatusMessage(err.message);
@@ -152,7 +170,16 @@ function App() {
   async function submitMessage() {
     const value = input.trim();
     if (!value) return;
-    if (!canAsk) {
+    let activeRepo = repo;
+    if (activeRepo?.id && activeRepo.status !== "ready") {
+      try {
+        activeRepo = await fetchRepo(activeRepo.id);
+        setRepo(activeRepo);
+      } catch (err) {
+        setStatusMessage(err.message);
+      }
+    }
+    if (!activeRepo?.id || activeRepo.status !== "ready") {
       appendAssistant("请先完成仓库索引，状态变成“已就绪”后再提问或分析。", [], "ask");
       setRepoPopoverOpen(true);
       return;
@@ -175,13 +202,13 @@ function App() {
     try {
       if (intent === "impact") {
         const data = await request("/api/impact", {
-          repository_id: repo.id,
+          repository_id: activeRepo.id,
           diff_text: value
         });
         appendAssistant(formatImpact(data), data.citations || [], "impact");
       } else {
         const data = await request("/api/ask", {
-          repository_id: repo.id,
+          repository_id: activeRepo.id,
           question: value
         });
         appendAssistant(data.answer || "暂无回答。", data.citations || [], "ask");
@@ -344,7 +371,7 @@ function App() {
                 }
               }}
             />
-            <button onClick={submitMessage} disabled={busy || !input.trim() || !canAsk}>
+            <button onClick={submitMessage} disabled={busy || !input.trim()}>
               <SendHorizontal size={18} />
             </button>
           </div>

@@ -13,6 +13,7 @@ services:
       OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
       OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o-mini}"
       EMBEDDING_MODEL: "${EMBEDDING_MODEL:-text-embedding-3-small}"
+      EMBEDDING_PROVIDER: "${EMBEDDING_PROVIDER:-remote}"
       EMBEDDING_DIM: "${EMBEDDING_DIM:-128}"
       GITHUB_TIMEOUT_SECONDS: "${GITHUB_TIMEOUT_SECONDS:-180}"
       MAX_REPO_MB: "${MAX_REPO_MB:-30}"

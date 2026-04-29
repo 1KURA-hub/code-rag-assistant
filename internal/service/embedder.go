@@ -30,7 +30,7 @@ func NewEmbedder(cfg config.Config) *Embedder {
 }
 
 func (e *Embedder) Embed(ctx context.Context, text string) ([]float64, error) {
-	if e.cfg.OpenAIAPIKey != "" {
+	if e.cfg.EmbeddingProvider == "remote" && e.cfg.OpenAIAPIKey != "" {
 		vector, err := e.embedRemote(ctx, text)
 		if err == nil {
 			return vector, nil

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type Config struct {
 	OpenAIAPIKey      string
 	OpenAIModel       string
 	EmbeddingModel    string
+	EmbeddingProvider string
 }
 
 func Load() Config {
@@ -43,6 +45,7 @@ func Load() Config {
 		OpenAIAPIKey:      openAIAPIKey,
 		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),
 		EmbeddingModel:    getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+		EmbeddingProvider: strings.ToLower(getenv("EMBEDDING_PROVIDER", "remote")),
 	}
 }
 
