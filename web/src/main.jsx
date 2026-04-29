@@ -48,6 +48,13 @@ const defaultQuestion = "这个项目的消息消费主流程是什么？";
 const repoIDStorageKey = "code-rag-assistant.repo-id";
 const defaultRepoID = "1";
 
+function createMessageID() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function App() {
   const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
   const [repo, setRepo] = useState(null);
@@ -203,7 +210,7 @@ function App() {
     setLastIntent(intent);
 
     const userMessage = {
-      id: crypto.randomUUID(),
+      id: createMessageID(),
       role: "user",
       content: value,
       type: intent
@@ -235,7 +242,7 @@ function App() {
 
   function appendAssistant(content, citations, type = "ask") {
     const next = {
-      id: crypto.randomUUID(),
+      id: createMessageID(),
       role: "assistant",
       content,
       citations,
