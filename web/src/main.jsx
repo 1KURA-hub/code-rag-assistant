@@ -372,7 +372,13 @@ function App() {
               请先完成仓库索引
             </button>
           )}
-          <div className="composer">
+          <form
+            className="composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitMessage();
+            }}
+          >
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -384,10 +390,10 @@ function App() {
                 }
               }}
             />
-            <button onClick={submitMessage} disabled={busy || !input.trim()}>
+            <button type="submit" disabled={busy || !input.trim()}>
               <SendHorizontal size={18} />
             </button>
-          </div>
+          </form>
         </footer>
       </main>
 
