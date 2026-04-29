@@ -1,4 +1,23 @@
 services:
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8090"
+      POSTGRES_DSN: "host=postgres user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"
+      WORK_DIR: "/app/tmp/repos"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o-mini}"
+      EMBEDDING_MODEL: "${EMBEDDING_MODEL:-text-embedding-3-small}"
+    ports:
+      - "8090:8090"
+    volumes:
+      - app-workdir:/app/tmp/repos
+    restart: unless-stopped
+
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -9,6 +28,13 @@ services:
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U code_rag -d code_rag"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
 volumes:
+  app-workdir:
   postgres-data:
