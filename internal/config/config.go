@@ -17,6 +17,7 @@ type Config struct {
 	TopK              int
 	MaxRepoBytes      int64
 	GitHubTimeout     time.Duration
+	LLMTimeout        time.Duration
 	OpenAIBaseURL     string
 	OpenAIAPIKey      string
 	OpenAIModel       string
@@ -41,6 +42,7 @@ func Load() Config {
 		TopK:              getenvInt("TOP_K", 8),
 		MaxRepoBytes:      int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
 		GitHubTimeout:     time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
+		LLMTimeout:        time.Duration(getenvInt("LLM_TIMEOUT_SECONDS", 60)) * time.Second,
 		OpenAIBaseURL:     openAIBaseURL,
 		OpenAIAPIKey:      openAIAPIKey,
 		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),

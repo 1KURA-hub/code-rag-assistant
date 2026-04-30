@@ -50,7 +50,8 @@ func callLLM(ctx context.Context, cfg config.Config, system, user string) (strin
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.OpenAIAPIKey)
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: cfg.LLMTimeout}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
