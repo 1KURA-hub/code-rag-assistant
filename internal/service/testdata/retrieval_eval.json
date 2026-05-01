@@ -1,0 +1,96 @@
+[
+  {
+    "name": "prefer_create_and_index_symbol",
+    "question": "CreateAndIndex 是怎么创建索引任务的？",
+    "top_k": 1,
+    "expected_symbols": ["CreateAndIndex"],
+    "candidates": [
+      {
+        "file_path": "internal/service/other.go",
+        "start_line": 1,
+        "end_line": 12,
+        "language": "go",
+        "symbol_name": "Other",
+        "symbol_type": "function",
+        "content": "func Other() {}",
+        "score": 0.8
+      },
+      {
+        "file_path": "internal/service/ingest.go",
+        "start_line": 31,
+        "end_line": 78,
+        "language": "go",
+        "symbol_name": "CreateAndIndex",
+        "symbol_type": "function",
+        "content": "func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*model.Repository, error) {}",
+        "score": 0.7
+      }
+    ]
+  },
+  {
+    "name": "prefer_go_chunking_symbol",
+    "question": "Go 文件是怎么通过 AST 分片的？",
+    "top_k": 2,
+    "expected_symbols": ["ChunkSourceFile", "chunkGoFile"],
+    "candidates": [
+      {
+        "file_path": "internal/service/llm.go",
+        "start_line": 1,
+        "end_line": 40,
+        "language": "go",
+        "symbol_name": "callLLM",
+        "symbol_type": "function",
+        "content": "func callLLM(ctx context.Context, cfg config.Config, messages []chatMessage) (string, error) {}",
+        "score": 0.82
+      },
+      {
+        "file_path": "internal/service/chunker.go",
+        "start_line": 20,
+        "end_line": 33,
+        "language": "go",
+        "symbol_name": "ChunkSourceFile",
+        "symbol_type": "function",
+        "content": "func ChunkSourceFile(file util.SourceFile, maxLines, overlap int) []Chunk { if strings.EqualFold(filepath.Ext(file.Path), \".go\") { chunks := chunkGoFile(file, maxLines) } }",
+        "score": 0.68
+      },
+      {
+        "file_path": "internal/service/chunker.go",
+        "start_line": 58,
+        "end_line": 79,
+        "language": "go",
+        "symbol_name": "chunkGoFile",
+        "symbol_type": "function",
+        "content": "func chunkGoFile(file util.SourceFile, maxLines int) []Chunk { fset := token.NewFileSet(); parsed, err := parser.ParseFile(fset, file.Path, file.Content, parser.ParseComments); _ = parsed }",
+        "score": 0.67
+      }
+    ]
+  },
+  {
+    "name": "prefer_stream_relay_alias",
+    "question": "Redis Stream 转发逻辑是怎么工作的？",
+    "top_k": 1,
+    "expected_symbols": ["relayNewMessages"],
+    "candidates": [
+      {
+        "file_path": "internal/service/answer.go",
+        "start_line": 1,
+        "end_line": 35,
+        "language": "go",
+        "symbol_name": "Ask",
+        "symbol_type": "method",
+        "content": "func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question string) (*AskResponse, error) {}",
+        "score": 0.76
+      },
+      {
+        "file_path": "mq/relay.go",
+        "start_line": 40,
+        "end_line": 96,
+        "language": "go",
+        "symbol_name": "relayNewMessages",
+        "symbol_type": "function",
+        "content": "func relayNewMessages(ctx context.Context) { XREADGROUP streams messages pending consumer group xack xadd redis stream relay }",
+        "score": 0.69
+      }
+    ]
+  }
+]
