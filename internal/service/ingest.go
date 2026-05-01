@@ -37,23 +37,34 @@ func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*mo
 	var repo model.Repository
 	err = s.db.WithContext(ctx).Where("owner = ? AND name = ?", ref.Owner, ref.Name).First(&repo).Error
 	if err == nil {
-		if err := s.db.WithContext(ctx).Model(&repo).Updates(map[string]interface{}{
-			"repo_url":      repoURL,
-			"status":        "pending",
-			"error_message": "",
-		}).Error; err != nil {
+		result := s.db.WithContext(ctx).Model(&model.Repository{}).
+			Where("id = ? AND status NOT IN ?", repo.ID, []string{"pending", "indexing"}).
+			Updates(map[string]interface{}{
+				"repo_url":      repoURL,
+				"status":        "pending",
+				"error_message": "",
+			})
+		if result.Error != nil {
+			return nil, result.Error
+		}
+		if result.RowsAffected == 0 {
+			if err := s.db.WithContext(ctx).First(&repo, repo.ID).Error; err != nil {
+				return nil, err
+			}
+			s.setRepoCache(ctx, &repo)
+			return &repo, nil
+		}
+		if err := s.db.WithContext(ctx).First(&repo, repo.ID).Error; err != nil {
 			return nil, err
 		}
 		s.deleteRepoCache(ctx, repo.ID)
-		repo.RepoURL = repoURL
-		repo.Status = "pending"
-		repo.ErrorMessage = ""
 		go s.index(context.Background(), repo.ID, ref)
 		return &repo, nil
 	}
-	if err != gorm.ErrRecordNotFound {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
+
 	repo = model.Repository{
 		RepoURL: repoURL,
 		Owner:   ref.Owner,
