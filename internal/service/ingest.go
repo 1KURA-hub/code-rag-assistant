@@ -24,6 +24,8 @@ type IngestService struct {
 	cfg     config.Config
 }
 
+const staleIndexTaskAfter = 10 * time.Minute
+
 func NewIngestService(db *gorm.DB, rdb *redis.Client, fetcher *GitHubFetcher, indexer *CodeIndexer, cfg config.Config) *IngestService {
 	return &IngestService{db: db, rdb: rdb, fetcher: fetcher, indexer: indexer, cfg: cfg}
 }
@@ -37,8 +39,10 @@ func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*mo
 	var repo model.Repository
 	err = s.db.WithContext(ctx).Where("owner = ? AND name = ?", ref.Owner, ref.Name).First(&repo).Error
 	if err == nil {
+		staleBefore := time.Now().Add(-staleIndexTaskAfter)
 		result := s.db.WithContext(ctx).Model(&model.Repository{}).
-			Where("id = ? AND status NOT IN ?", repo.ID, []string{"pending", "indexing"}).
+			Where("id = ?", repo.ID).
+			Where("status NOT IN ? OR updated_at < ?", []string{"pending", "indexing"}, staleBefore).
 			Updates(map[string]interface{}{
 				"repo_url":      repoURL,
 				"status":        "pending",

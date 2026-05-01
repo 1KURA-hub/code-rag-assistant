@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strings"
+	"unicode"
 
 	"code-rag-assistant/internal/config"
 
@@ -54,30 +55,81 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 	if err != nil {
 		return nil, err
 	}
-	boost(rows, append(hints, matchedAliases(expandedQuery)...))
+	boost(rows, query, hints)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}
 	return rows, nil
 }
 
-func boost(rows []Citation, hints []string) {
-	normalized := make([]string, 0, len(hints))
-	for _, hint := range hints {
-		hint = strings.ToLower(strings.TrimSpace(hint))
-		if hint != "" {
-			normalized = append(normalized, hint)
-		}
-	}
+func boost(rows []Citation, query string, hints []string) {
+	terms := rerankTerms(query, hints)
+	queryLower := strings.ToLower(query)
+
 	for i := range rows {
-		target := strings.ToLower(rows[i].FilePath + "\n" + rows[i].Content)
-		for _, hint := range normalized {
-			if strings.Contains(target, hint) {
-				rows[i].Score += 0.08
+		var bonus float64
+		filePath := strings.ToLower(rows[i].FilePath)
+		symbolName := strings.ToLower(rows[i].SymbolName)
+		symbolType := strings.ToLower(rows[i].SymbolType)
+		content := strings.ToLower(rows[i].Content)
+
+		if symbolName != "" && strings.Contains(queryLower, symbolName) {
+			bonus += 0.18
+		}
+		if symbolType == "function" || symbolType == "method" {
+			bonus += 0.02
+		}
+		for _, term := range terms {
+			switch {
+			case symbolName != "" && strings.Contains(symbolName, term):
+				bonus += 0.12
+			case strings.Contains(filePath, term):
+				bonus += 0.08
+			case strings.Contains(content, term):
+				bonus += 0.03
+			}
+			if bonus >= 0.35 {
+				bonus = 0.35
+				break
 			}
 		}
+		rows[i].Score += bonus
 	}
+
 	sort.SliceStable(rows, func(i, j int) bool {
 		return rows[i].Score > rows[j].Score
+	})
+}
+
+func rerankTerms(query string, hints []string) []string {
+	seen := map[string]bool{}
+	var terms []string
+	add := func(term string) {
+		term = strings.ToLower(strings.TrimSpace(term))
+		if len([]rune(term)) < 2 || seen[term] {
+			return
+		}
+		seen[term] = true
+		terms = append(terms, term)
+	}
+
+	for _, term := range splitSearchTerms(query) {
+		add(term)
+	}
+	for _, hint := range hints {
+		add(hint)
+		for _, term := range splitSearchTerms(hint) {
+			add(term)
+		}
+	}
+	for _, alias := range matchedAliases(query + "\n" + strings.Join(hints, "\n")) {
+		add(alias)
+	}
+	return terms
+}
+
+func splitSearchTerms(text string) []string {
+	return strings.FieldsFunc(text, func(r rune) bool {
+		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '.' || r == '/' || r == '-')
 	})
 }
