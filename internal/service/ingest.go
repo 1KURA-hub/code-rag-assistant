@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"path/filepath"
 	"time"
 
@@ -9,18 +12,20 @@ import (
 	"code-rag-assistant/internal/model"
 	"code-rag-assistant/internal/util"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type IngestService struct {
 	db      *gorm.DB
+	rdb     *redis.Client
 	fetcher *GitHubFetcher
 	indexer *CodeIndexer
 	cfg     config.Config
 }
 
-func NewIngestService(db *gorm.DB, fetcher *GitHubFetcher, indexer *CodeIndexer, cfg config.Config) *IngestService {
-	return &IngestService{db: db, fetcher: fetcher, indexer: indexer, cfg: cfg}
+func NewIngestService(db *gorm.DB, rdb *redis.Client, fetcher *GitHubFetcher, indexer *CodeIndexer, cfg config.Config) *IngestService {
+	return &IngestService{db: db, rdb: rdb, fetcher: fetcher, indexer: indexer, cfg: cfg}
 }
 
 func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*model.Repository, error) {
@@ -39,6 +44,7 @@ func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*mo
 		}).Error; err != nil {
 			return nil, err
 		}
+		s.deleteRepoCache(ctx, repo.ID)
 		repo.RepoURL = repoURL
 		repo.Status = "pending"
 		repo.ErrorMessage = ""
@@ -57,15 +63,21 @@ func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*mo
 	if err := s.db.WithContext(ctx).Create(&repo).Error; err != nil {
 		return nil, err
 	}
+	s.deleteRepoCache(ctx, repo.ID)
 	go s.index(context.Background(), repo.ID, ref)
 	return &repo, nil
 }
 
 func (s *IngestService) Get(ctx context.Context, id uint) (*model.Repository, error) {
+	if repo, ok := s.getRepoCache(ctx, id); ok {
+		return repo, nil
+	}
+
 	var repo model.Repository
 	if err := s.db.WithContext(ctx).First(&repo, id).Error; err != nil {
 		return nil, err
 	}
+	s.setRepoCache(ctx, &repo)
 	return &repo, nil
 }
 
@@ -95,9 +107,13 @@ func (s *IngestService) index(ctx context.Context, repoID uint, ref GitHubRepoRe
 }
 
 func (s *IngestService) updateStatus(ctx context.Context, repoID uint, status, message string) {
-	_ = s.db.WithContext(ctx).Model(&model.Repository{}).
+	if err := s.db.WithContext(ctx).Model(&model.Repository{}).
 		Where("id = ?", repoID).
-		Updates(map[string]interface{}{"status": status, "error_message": message}).Error
+		Updates(map[string]interface{}{"status": status, "error_message": message}).Error; err != nil {
+		log.Printf("update repository status failed: %v", err)
+		return
+	}
+	s.deleteRepoCache(ctx, repoID)
 }
 
 func (s *IngestService) markFailedOrKeepReady(ctx context.Context, repoID uint, message string) {
@@ -115,19 +131,23 @@ func (s *IngestService) markFailedOrKeepReady(ctx context.Context, repoID uint, 
 		Where("repository_id = ?", repoID).
 		Distinct("file_path").
 		Count(&fileCount).Error
-	_ = s.db.WithContext(ctx).Model(&model.Repository{}).
+	if err := s.db.WithContext(ctx).Model(&model.Repository{}).
 		Where("id = ?", repoID).
 		Updates(map[string]interface{}{
 			"status":        "ready",
 			"error_message": "上次重新索引失败，继续使用已有索引：" + message,
 			"file_count":    fileCount,
 			"chunk_count":   chunkCount,
-		}).Error
+		}).Error; err != nil {
+		log.Printf("keep repository ready after failed reindex failed: %v", err)
+		return
+	}
+	s.deleteRepoCache(ctx, repoID)
 }
 
 func (s *IngestService) updateReady(ctx context.Context, repoID uint, stats IndexStats) {
 	now := time.Now()
-	_ = s.db.WithContext(ctx).Model(&model.Repository{}).
+	if err := s.db.WithContext(ctx).Model(&model.Repository{}).
 		Where("id = ?", repoID).
 		Updates(map[string]interface{}{
 			"status":            "ready",
@@ -136,5 +156,60 @@ func (s *IngestService) updateReady(ctx context.Context, repoID uint, stats Inde
 			"chunk_count":       stats.ChunkCount,
 			"index_duration_ms": stats.IndexDurationMS,
 			"indexed_at":        &now,
-		}).Error
+		}).Error; err != nil {
+		log.Printf("update repository ready status failed: %v", err)
+		return
+	}
+	s.deleteRepoCache(ctx, repoID)
+}
+
+func repoCacheKey(id uint) string {
+	return fmt.Sprintf("rag:repo:%d", id)
+}
+
+func (s *IngestService) getRepoCache(ctx context.Context, id uint) (*model.Repository, bool) {
+	if s.rdb == nil || s.cfg.RepoCacheTTL <= 0 {
+		return nil, false
+	}
+
+	data, err := s.rdb.Get(ctx, repoCacheKey(id)).Bytes()
+	if err == redis.Nil {
+		return nil, false
+	}
+	if err != nil {
+		log.Printf("get repository cache failed: %v", err)
+		return nil, false
+	}
+
+	var repo model.Repository
+	if err := json.Unmarshal(data, &repo); err != nil {
+		log.Printf("decode repository cache failed: %v", err)
+		s.deleteRepoCache(ctx, id)
+		return nil, false
+	}
+	return &repo, true
+}
+
+func (s *IngestService) setRepoCache(ctx context.Context, repo *model.Repository) {
+	if s.rdb == nil || s.cfg.RepoCacheTTL <= 0 {
+		return
+	}
+
+	data, err := json.Marshal(repo)
+	if err != nil {
+		log.Printf("encode repository cache failed: %v", err)
+		return
+	}
+	if err := s.rdb.Set(ctx, repoCacheKey(repo.ID), data, s.cfg.RepoCacheTTL).Err(); err != nil {
+		log.Printf("set repository cache failed: %v", err)
+	}
+}
+
+func (s *IngestService) deleteRepoCache(ctx context.Context, id uint) {
+	if s.rdb == nil {
+		return
+	}
+	if err := s.rdb.Del(ctx, repoCacheKey(id)).Err(); err != nil {
+		log.Printf("delete repository cache failed: %v", err)
+	}
 }

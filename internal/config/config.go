@@ -18,6 +18,10 @@ type Config struct {
 	MaxRepoBytes      int64
 	GitHubTimeout     time.Duration
 	LLMTimeout        time.Duration
+	RedisAddr         string
+	RedisPassword     string
+	RedisDB           int
+	RepoCacheTTL      time.Duration
 	OpenAIBaseURL     string
 	OpenAIAPIKey      string
 	OpenAIModel       string
@@ -43,6 +47,10 @@ func Load() Config {
 		MaxRepoBytes:      int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
 		GitHubTimeout:     time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
 		LLMTimeout:        time.Duration(getenvInt("LLM_TIMEOUT_SECONDS", 60)) * time.Second,
+		RedisAddr:         getenv("REDIS_ADDR", ""),
+		RedisPassword:     getenv("REDIS_PASSWORD", ""),
+		RedisDB:           getenvInt("REDIS_DB", 0),
+		RepoCacheTTL:      time.Duration(getenvInt("REPO_CACHE_TTL_SECONDS", 10)) * time.Second,
 		OpenAIBaseURL:     openAIBaseURL,
 		OpenAIAPIKey:      openAIAPIKey,
 		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),

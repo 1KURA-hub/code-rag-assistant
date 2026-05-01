@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	"code-rag-assistant/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -30,10 +32,24 @@ func main() {
 		log.Printf("create vector index: %v", err)
 	}
 
+	var rdb *redis.Client
+	if cfg.RedisAddr != "" {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:     cfg.RedisAddr,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDB,
+		})
+		if err := rdb.Ping(context.Background()).Err(); err != nil {
+			log.Printf("redis unavailable, repository status cache disabled: %v", err)
+			_ = rdb.Close()
+			rdb = nil
+		}
+	}
+
 	embedder := service.NewEmbedder(cfg)
 	fetcher := service.NewGitHubFetcher(cfg)
 	indexer := service.NewCodeIndexer(db, embedder, cfg)
-	ingest := service.NewIngestService(db, fetcher, indexer, cfg)
+	ingest := service.NewIngestService(db, rdb, fetcher, indexer, cfg)
 	retriever := service.NewRetriever(db, embedder, cfg)
 	answer := service.NewAnswerService(db, retriever, cfg)
 	impact := service.NewImpactService(db, retriever, cfg)

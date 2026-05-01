@@ -4,9 +4,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       PORT: "8090"
       POSTGRES_DSN: "host=postgres user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"
+      REDIS_ADDR: "redis:6379"
+      REPO_CACHE_TTL_SECONDS: "${REPO_CACHE_TTL_SECONDS:-10}"
       WORK_DIR: "/app/tmp/repos"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       DASHSCOPE_API_KEY: "${DASHSCOPE_API_KEY:-}"
@@ -39,6 +43,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     restart: unless-stopped
 
 volumes:
