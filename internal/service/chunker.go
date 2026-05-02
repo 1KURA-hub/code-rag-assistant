@@ -84,11 +84,38 @@ func chunkGoFile(file util.SourceFile, maxLines int) []Chunk {
 				switch s := spec.(type) {
 				case *ast.TypeSpec:
 					chunks = append(chunks, goNodeChunk(fset, lines, s.Pos(), s.End(), s.Name.Name, "type", maxLines)...)
+				case *ast.ValueSpec:
+					symbolType := valueSpecSymbolType(d.Tok)
+					if symbolType == "" {
+						continue
+					}
+					chunks = append(chunks, goNodeChunk(fset, lines, s.Pos(), s.End(), valueSpecNames(s), symbolType, maxLines)...)
 				}
 			}
 		}
 	}
 	return chunks
+}
+
+func valueSpecSymbolType(tok token.Token) string {
+	switch tok {
+	case token.CONST:
+		return "constant"
+	case token.VAR:
+		return "variable"
+	default:
+		return ""
+	}
+}
+
+func valueSpecNames(spec *ast.ValueSpec) string {
+	names := make([]string, 0, len(spec.Names))
+	for _, name := range spec.Names {
+		if name.Name != "" {
+			names = append(names, name.Name)
+		}
+	}
+	return strings.Join(names, ",")
 }
 
 func goNodeChunk(fset *token.FileSet, lines []string, startPos, endPos token.Pos, symbolName, symbolType string, maxLines int) []Chunk {

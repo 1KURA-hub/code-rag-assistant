@@ -11,6 +11,10 @@ func TestChunkSourceFileSplitsGoSymbols(t *testing.T) {
 		Path: "mq/consumer.go",
 		Content: `package mq
 
+const RetryCountHeader = "x-retry-count"
+
+var defaultTopics = []string{"course.select"}
+
 type Consumer struct {
 	name string
 }
@@ -28,6 +32,8 @@ func (c *Consumer) HandleMessage() error {
 	chunks := ChunkSourceFile(file, 80, 0)
 
 	want := map[string]string{
+		"RetryCountHeader":       "constant",
+		"defaultTopics":          "variable",
 		"Consumer":               "type",
 		"NewConsumer":            "function",
 		"Consumer.HandleMessage": "function",
