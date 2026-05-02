@@ -42,7 +42,7 @@ func Load() Config {
 		PostgresDSN:        getenv("POSTGRES_DSN", "host=127.0.0.1 user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"),
 		WorkDir:            getenv("WORK_DIR", "./tmp/repos"),
 		EmbeddingDim:       getenvInt("EMBEDDING_DIM", 128),
-		EmbeddingBatchSize: getenvInt("EMBEDDING_BATCH_SIZE", 32),
+		EmbeddingBatchSize: getenvInt("EMBEDDING_BATCH_SIZE", 10),
 		ChunkMaxLines:      getenvInt("CHUNK_MAX_LINES", 80),
 		ChunkOverlapLines:  getenvInt("CHUNK_OVERLAP_LINES", 12),
 		TopK:               getenvInt("TOP_K", 8),
