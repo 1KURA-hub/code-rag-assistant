@@ -18,6 +18,7 @@ type Config struct {
 	TopK               int
 	MaxRepoBytes       int64
 	GitHubTimeout      time.Duration
+	GitHubProxyURL     string
 	LLMTimeout         time.Duration
 	RedisAddr          string
 	RedisPassword      string
@@ -48,6 +49,7 @@ func Load() Config {
 		TopK:               getenvInt("TOP_K", 8),
 		MaxRepoBytes:       int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
 		GitHubTimeout:      time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
+		GitHubProxyURL:     strings.TrimRight(getenv("GITHUB_PROXY_URL", ""), "/"),
 		LLMTimeout:         time.Duration(getenvInt("LLM_TIMEOUT_SECONDS", 60)) * time.Second,
 		RedisAddr:          getenv("REDIS_ADDR", ""),
 		RedisPassword:      getenv("REDIS_PASSWORD", ""),

@@ -128,9 +128,12 @@ export OPENAI_MODEL="gpt-4o-mini"
 export EMBEDDING_MODEL="text-embedding-3-small"
 export EMBEDDING_PROVIDER="remote"
 export EMBEDDING_BATCH_SIZE="10"
+export GITHUB_PROXY_URL=""
 ```
 
 也可以使用 OpenAI 兼容接口，例如 DashScope、OpenRouter 等。未配置 API Key 时，项目会使用本地 hash embedding fallback，便于本地跑通流程，但检索质量不等同于真实 embedding 模型。
+
+如果服务器访问 GitHub ZIP 超时，可以配置 GitHub 代理，例如 `GITHUB_PROXY_URL="https://gh-proxy.com"`。
 
 ## API 示例
 

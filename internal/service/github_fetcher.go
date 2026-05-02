@@ -59,8 +59,9 @@ func (f *GitHubFetcher) DownloadZip(ctx context.Context, ref GitHubRepoRef, dest
 	var lastErr error
 	for _, branch := range branches {
 		zipURL := fmt.Sprintf("https://github.com/%s/%s/archive/refs/heads/%s.zip", ref.Owner, ref.Name, branch)
+		downloadURL := f.downloadURL(zipURL)
 		path := filepath.Join(destDir, fmt.Sprintf("%s-%s-%d.zip", ref.Owner, ref.Name, time.Now().UnixNano()))
-		if err := f.download(ctx, zipURL, path); err != nil {
+		if err := f.download(ctx, downloadURL, path); err != nil {
 			lastErr = err
 			continue
 		}
@@ -70,6 +71,13 @@ func (f *GitHubFetcher) DownloadZip(ctx context.Context, ref GitHubRepoRef, dest
 		lastErr = errors.New("download failed")
 	}
 	return "", lastErr
+}
+
+func (f *GitHubFetcher) downloadURL(rawURL string) string {
+	if f.cfg.GitHubProxyURL == "" {
+		return rawURL
+	}
+	return f.cfg.GitHubProxyURL + "/" + rawURL
 }
 
 func (f *GitHubFetcher) download(ctx context.Context, zipURL, path string) error {
