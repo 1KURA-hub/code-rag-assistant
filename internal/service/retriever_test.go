@@ -32,6 +32,82 @@ func TestBoostPrioritizesSymbolNameMentionedInQuery(t *testing.T) {
 	}
 }
 
+func TestBoostPrioritizesFilePathMentionedInQuery(t *testing.T) {
+	rows := []Citation{
+		{
+			FilePath:   "internal/service/answer.go",
+			SymbolName: "Ask",
+			SymbolType: "method",
+			Content:    "func (s *AnswerService) Ask() {}",
+			Score:      0.82,
+		},
+		{
+			FilePath:   "mq/consumer.go",
+			SymbolName: "handleRetryOrDLQ",
+			SymbolType: "function",
+			Content:    "func handleRetryOrDLQ() {}",
+			Score:      0.70,
+		},
+	}
+
+	boost(rows, "mq/consumer.go 里的重试逻辑是什么", nil)
+
+	if rows[0].FilePath != "mq/consumer.go" {
+		t.Fatalf("boost() ranked %q first, want mq/consumer.go", rows[0].FilePath)
+	}
+}
+
+func TestBoostPrioritizesLanguageMentionedInQuery(t *testing.T) {
+	rows := []Citation{
+		{
+			FilePath:   ".github/workflows/ci.yml",
+			Language:   "yaml",
+			SymbolType: "chunk",
+			Content:    "go test ./...",
+			Score:      0.80,
+		},
+		{
+			FilePath:   "internal/service/chunker.go",
+			Language:   "go",
+			SymbolName: "ChunkSourceFile",
+			SymbolType: "function",
+			Content:    "func ChunkSourceFile() {}",
+			Score:      0.76,
+		},
+	}
+
+	boost(rows, "Go 文件是怎么分片的", nil)
+
+	if rows[0].Language != "go" {
+		t.Fatalf("boost() ranked language %q first, want go", rows[0].Language)
+	}
+}
+
+func TestKeywordSearchTermsIncludePathsAndSymbols(t *testing.T) {
+	features := analyzeSearchFeatures("mq/consumer.go 里的 handleRetryOrDLQ 怎么处理死信", nil)
+	terms := keywordSearchTerms(features)
+
+	for _, want := range []string{"mq/consumer.go", "handleretryordlq"} {
+		if !containsString(terms, want) {
+			t.Fatalf("keywordSearchTerms() = %v, want %q", terms, want)
+		}
+	}
+}
+
+func TestMergeCitationsDeduplicatesByID(t *testing.T) {
+	rows := mergeCitations(
+		[]Citation{{ID: 1, FilePath: "a.go", Score: 0.3}},
+		[]Citation{{ID: 1, FilePath: "a.go", Score: 0.8}, {ID: 2, FilePath: "b.go", Score: 0.5}},
+	)
+
+	if len(rows) != 2 {
+		t.Fatalf("len(rows) = %d, want 2", len(rows))
+	}
+	if rows[0].Score != 0.8 {
+		t.Fatalf("deduped score = %.2f, want 0.80", rows[0].Score)
+	}
+}
+
 func TestRetrievalEvalSet(t *testing.T) {
 	cases := loadRetrievalEvalCases(t)
 	for _, tc := range cases {
