@@ -8,25 +8,26 @@ import (
 )
 
 type Config struct {
-	Port              string
-	PostgresDSN       string
-	WorkDir           string
-	EmbeddingDim      int
-	ChunkMaxLines     int
-	ChunkOverlapLines int
-	TopK              int
-	MaxRepoBytes      int64
-	GitHubTimeout     time.Duration
-	LLMTimeout        time.Duration
-	RedisAddr         string
-	RedisPassword     string
-	RedisDB           int
-	RepoCacheTTL      time.Duration
-	OpenAIBaseURL     string
-	OpenAIAPIKey      string
-	OpenAIModel       string
-	EmbeddingModel    string
-	EmbeddingProvider string
+	Port               string
+	PostgresDSN        string
+	WorkDir            string
+	EmbeddingDim       int
+	EmbeddingBatchSize int
+	ChunkMaxLines      int
+	ChunkOverlapLines  int
+	TopK               int
+	MaxRepoBytes       int64
+	GitHubTimeout      time.Duration
+	LLMTimeout         time.Duration
+	RedisAddr          string
+	RedisPassword      string
+	RedisDB            int
+	RepoCacheTTL       time.Duration
+	OpenAIBaseURL      string
+	OpenAIAPIKey       string
+	OpenAIModel        string
+	EmbeddingModel     string
+	EmbeddingProvider  string
 }
 
 func Load() Config {
@@ -37,25 +38,26 @@ func Load() Config {
 	}
 
 	return Config{
-		Port:              getenv("PORT", "8090"),
-		PostgresDSN:       getenv("POSTGRES_DSN", "host=127.0.0.1 user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"),
-		WorkDir:           getenv("WORK_DIR", "./tmp/repos"),
-		EmbeddingDim:      getenvInt("EMBEDDING_DIM", 128),
-		ChunkMaxLines:     getenvInt("CHUNK_MAX_LINES", 80),
-		ChunkOverlapLines: getenvInt("CHUNK_OVERLAP_LINES", 12),
-		TopK:              getenvInt("TOP_K", 8),
-		MaxRepoBytes:      int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
-		GitHubTimeout:     time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
-		LLMTimeout:        time.Duration(getenvInt("LLM_TIMEOUT_SECONDS", 60)) * time.Second,
-		RedisAddr:         getenv("REDIS_ADDR", ""),
-		RedisPassword:     getenv("REDIS_PASSWORD", ""),
-		RedisDB:           getenvInt("REDIS_DB", 0),
-		RepoCacheTTL:      time.Duration(getenvInt("REPO_CACHE_TTL_SECONDS", 10)) * time.Second,
-		OpenAIBaseURL:     openAIBaseURL,
-		OpenAIAPIKey:      openAIAPIKey,
-		OpenAIModel:       getenv("OPENAI_MODEL", "gpt-4o-mini"),
-		EmbeddingModel:    getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
-		EmbeddingProvider: strings.ToLower(getenv("EMBEDDING_PROVIDER", "remote")),
+		Port:               getenv("PORT", "8090"),
+		PostgresDSN:        getenv("POSTGRES_DSN", "host=127.0.0.1 user=code_rag password=code_rag dbname=code_rag port=5432 sslmode=disable"),
+		WorkDir:            getenv("WORK_DIR", "./tmp/repos"),
+		EmbeddingDim:       getenvInt("EMBEDDING_DIM", 128),
+		EmbeddingBatchSize: getenvInt("EMBEDDING_BATCH_SIZE", 32),
+		ChunkMaxLines:      getenvInt("CHUNK_MAX_LINES", 80),
+		ChunkOverlapLines:  getenvInt("CHUNK_OVERLAP_LINES", 12),
+		TopK:               getenvInt("TOP_K", 8),
+		MaxRepoBytes:       int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
+		GitHubTimeout:      time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
+		LLMTimeout:         time.Duration(getenvInt("LLM_TIMEOUT_SECONDS", 60)) * time.Second,
+		RedisAddr:          getenv("REDIS_ADDR", ""),
+		RedisPassword:      getenv("REDIS_PASSWORD", ""),
+		RedisDB:            getenvInt("REDIS_DB", 0),
+		RepoCacheTTL:       time.Duration(getenvInt("REPO_CACHE_TTL_SECONDS", 10)) * time.Second,
+		OpenAIBaseURL:      openAIBaseURL,
+		OpenAIAPIKey:       openAIAPIKey,
+		OpenAIModel:        getenv("OPENAI_MODEL", "gpt-4o-mini"),
+		EmbeddingModel:     getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+		EmbeddingProvider:  strings.ToLower(getenv("EMBEDDING_PROVIDER", "remote")),
 	}
 }
 

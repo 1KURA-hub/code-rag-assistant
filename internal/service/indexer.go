@@ -26,6 +26,12 @@ type IndexStats struct {
 	IndexDurationMS int64
 }
 
+type chunkRecordInput struct {
+	filePath   string
+	chunk      Chunk
+	chunkIndex int
+}
+
 func NewCodeIndexer(db *gorm.DB, embedder *Embedder, cfg config.Config) *CodeIndexer {
 	return &CodeIndexer{db: db, embedder: embedder, cfg: cfg}
 }
@@ -36,26 +42,53 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 	if err != nil {
 		return IndexStats{}, err
 	}
-	records := make([]*model.CodeChunk, 0, len(files)*2)
+	inputs := make([]chunkRecordInput, 0, len(files)*2)
 	for _, file := range files {
 		chunks := ChunkSourceFile(file, i.cfg.ChunkMaxLines, i.cfg.ChunkOverlapLines)
 		for idx, chunk := range chunks {
-			embeddingText := chunkEmbeddingText(file.Path, chunk)
-			vector, err := i.embedder.Embed(ctx, embeddingText)
-			if err != nil {
-				return IndexStats{}, fmt.Errorf("embed %s:%d-%d: %w", file.Path, chunk.StartLine, chunk.EndLine, err)
-			}
+			inputs = append(inputs, chunkRecordInput{filePath: file.Path, chunk: chunk, chunkIndex: idx})
+		}
+	}
+
+	records := make([]*model.CodeChunk, 0, len(inputs))
+	batchSize := i.cfg.EmbeddingBatchSize
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+	for start := 0; start < len(inputs); start += batchSize {
+		end := start + batchSize
+		if end > len(inputs) {
+			end = len(inputs)
+		}
+		batch := inputs[start:end]
+		texts := make([]string, len(batch))
+		for idx, input := range batch {
+			texts[idx] = chunkEmbeddingText(input.filePath, input.chunk)
+		}
+		vectors, err := i.embedder.EmbedBatch(ctx, texts)
+		if err != nil {
+			first := batch[0]
+			last := batch[len(batch)-1]
+			return IndexStats{}, fmt.Errorf("embed batch %s:%d-%d to %s:%d-%d: %w",
+				first.filePath, first.chunk.StartLine, first.chunk.EndLine,
+				last.filePath, last.chunk.StartLine, last.chunk.EndLine, err)
+		}
+		if len(vectors) != len(batch) {
+			return IndexStats{}, fmt.Errorf("embed batch count mismatch: got %d want %d", len(vectors), len(batch))
+		}
+		for idx, input := range batch {
+			chunk := input.chunk
 			record := &model.CodeChunk{
 				RepositoryID:    repo.ID,
-				FilePath:        file.Path,
+				FilePath:        input.filePath,
 				StartLine:       chunk.StartLine,
 				EndLine:         chunk.EndLine,
-				ChunkIndex:      idx,
-				Language:        chunkLanguage(file.Path, chunk),
+				ChunkIndex:      input.chunkIndex,
+				Language:        chunkLanguage(input.filePath, chunk),
 				SymbolName:      chunk.SymbolName,
 				SymbolType:      chunk.SymbolType,
 				Content:         chunk.Content,
-				EmbeddingVector: VectorLiteral(vector),
+				EmbeddingVector: VectorLiteral(vectors[idx]),
 			}
 			records = append(records, record)
 		}
