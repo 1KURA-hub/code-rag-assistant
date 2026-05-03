@@ -318,9 +318,44 @@ func citationKey(row Citation) string {
 }
 
 func splitSearchTerms(text string) []string {
+	text = normalizeSearchText(text)
 	return strings.FieldsFunc(text, func(r rune) bool {
 		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '.' || r == '/' || r == '-')
 	})
+}
+
+func normalizeSearchText(text string) string {
+	runes := []rune(text)
+	if len(runes) == 0 {
+		return text
+	}
+	var b strings.Builder
+	b.Grow(len(text) + 8)
+	for i, r := range runes {
+		if i > 0 && shouldInsertSearchSpace(runes[i-1], r) {
+			b.WriteByte(' ')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func shouldInsertSearchSpace(prev, cur rune) bool {
+	return (isCodeSearchRune(prev) && isCJKRune(cur)) ||
+		(isCJKRune(prev) && isCodeSearchRune(cur))
+}
+
+func isCodeSearchRune(r rune) bool {
+	return (unicode.IsLetter(r) && !isCJKRune(r)) ||
+		unicode.IsDigit(r) ||
+		r == '_' ||
+		r == '.' ||
+		r == '/' ||
+		r == '-'
+}
+
+func isCJKRune(r rune) bool {
+	return unicode.In(r, unicode.Han)
 }
 
 func isPathLike(term string) bool {

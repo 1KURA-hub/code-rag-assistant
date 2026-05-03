@@ -94,6 +94,44 @@ func TestKeywordSearchTermsIncludePathsAndSymbols(t *testing.T) {
 	}
 }
 
+func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "symbol followed by chinese",
+			input: "HandleMessage怎么处理",
+			want:  []string{"HandleMessage", "怎么处理"},
+		},
+		{
+			name:  "path followed by chinese",
+			input: "mq/consumer.go里的逻辑",
+			want:  []string{"mq/consumer.go", "里的逻辑"},
+		},
+		{
+			name:  "chinese around symbol",
+			input: "解析CreateAndIndex函数",
+			want:  []string{"解析", "CreateAndIndex", "函数"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := splitSearchTerms(tc.input)
+			if len(got) != len(tc.want) {
+				t.Fatalf("splitSearchTerms(%q) = %v, want %v", tc.input, got, tc.want)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Fatalf("splitSearchTerms(%q) = %v, want %v", tc.input, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestMergeCitationsDeduplicatesByID(t *testing.T) {
 	rows := mergeCitations(
 		[]Citation{{ID: 1, FilePath: "a.go", Score: 0.3}},
