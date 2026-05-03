@@ -1,95 +1,445 @@
 [
   {
-    "name": "prefer_create_and_index_symbol",
+    "name": "repo_create_and_index",
     "question": "CreateAndIndex 是怎么创建索引任务的？",
     "top_k": 1,
     "expected_symbols": ["CreateAndIndex"],
     "candidates": [
       {
-        "file_path": "internal/service/other.go",
-        "start_line": 1,
-        "end_line": 12,
+        "file_path": "internal/service/answer.go",
+        "start_line": 30,
+        "end_line": 44,
         "language": "go",
-        "symbol_name": "Other",
-        "symbol_type": "function",
-        "content": "func Other() {}",
-        "score": 0.8
+        "symbol_name": "Ask",
+        "symbol_type": "method",
+        "content": "func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question string) (*AskResponse, error) { citations, err := s.retriever.Search(ctx, repositoryID, question, nil); return &AskResponse{Citations: citations}, err }",
+        "score": 0.82
       },
       {
         "file_path": "internal/service/ingest.go",
-        "start_line": 31,
-        "end_line": 78,
+        "start_line": 33,
+        "end_line": 84,
         "language": "go",
         "symbol_name": "CreateAndIndex",
-        "symbol_type": "function",
-        "content": "func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*model.Repository, error) {}",
-        "score": 0.7
+        "symbol_type": "method",
+        "content": "func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*model.Repository, error) { ref, err := s.fetcher.Parse(repoURL); repo.Status = \"pending\"; go s.index(context.Background(), repo.ID, ref); return &repo, nil }",
+        "score": 0.68
+      },
+      {
+        "file_path": "internal/service/github_fetcher.go",
+        "start_line": 35,
+        "end_line": 52,
+        "language": "go",
+        "symbol_name": "Parse",
+        "symbol_type": "method",
+        "content": "func (f *GitHubFetcher) Parse(raw string) (GitHubRepoRef, error) { parsed, err := url.Parse(strings.TrimSpace(raw)); parts := strings.Split(strings.Trim(parsed.Path, \"/\"), \"/\"); return GitHubRepoRef{Owner: parts[0], Name: name}, nil }",
+        "score": 0.66
       }
     ]
   },
   {
-    "name": "prefer_go_chunking_symbol",
+    "name": "repo_background_index",
+    "question": "仓库后台 index 函数具体执行哪些步骤？",
+    "top_k": 2,
+    "expected_symbols": ["index", "IndexRepository"],
+    "candidates": [
+      {
+        "file_path": "internal/service/retriever.go",
+        "start_line": 44,
+        "end_line": 69,
+        "language": "go",
+        "symbol_name": "Search",
+        "symbol_type": "method",
+        "content": "func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string, hints []string) ([]Citation, error) { rows, err := r.vectorSearch(ctx, repositoryID, vector, limit); keywordRows, err := r.keywordSearch(ctx, repositoryID, features, r.cfg.TopK*2); return rows, err }",
+        "score": 0.84
+      },
+      {
+        "file_path": "internal/service/ingest.go",
+        "start_line": 99,
+        "end_line": 122,
+        "language": "go",
+        "symbol_name": "index",
+        "symbol_type": "method",
+        "content": "func (s *IngestService) index(ctx context.Context, repoID uint, ref GitHubRepoRef) { s.updateStatus(ctx, repoID, \"indexing\", \"\"); zipPath, err := s.fetcher.DownloadZip(ctx, ref, workDir); util.Unzip(zipPath, sourceDir); stats, err := s.indexer.IndexRepository(ctx, &repo, sourceDir); s.updateReady(ctx, repoID, stats) }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/indexer.go",
+        "start_line": 39,
+        "end_line": 111,
+        "language": "go",
+        "symbol_name": "IndexRepository",
+        "symbol_type": "method",
+        "content": "func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repository, root string) (IndexStats, error) { files, err := util.ScanSourceFiles(root); chunks := ChunkSourceFile(file, i.cfg.ChunkMaxLines, i.cfg.ChunkOverlapLines); vectors, err := i.embedder.EmbedBatch(ctx, texts); tx.Create(&records); return IndexStats{}, nil }",
+        "score": 0.67
+      }
+    ]
+  },
+  {
+    "name": "go_ast_chunking",
     "question": "Go 文件是怎么通过 AST 分片的？",
     "top_k": 2,
     "expected_symbols": ["ChunkSourceFile", "chunkGoFile"],
     "candidates": [
       {
         "file_path": "internal/service/llm.go",
-        "start_line": 1,
-        "end_line": 40,
+        "start_line": 32,
+        "end_line": 80,
         "language": "go",
         "symbol_name": "callLLM",
         "symbol_type": "function",
-        "content": "func callLLM(ctx context.Context, cfg config.Config, messages []chatMessage) (string, error) {}",
+        "content": "func callLLM(ctx context.Context, cfg config.Config, system, user string) (string, error) { req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body)); json.NewDecoder(resp.Body).Decode(&decoded); return content, nil }",
         "score": 0.82
       },
       {
         "file_path": "internal/service/chunker.go",
-        "start_line": 20,
-        "end_line": 33,
+        "start_line": 22,
+        "end_line": 30,
         "language": "go",
         "symbol_name": "ChunkSourceFile",
         "symbol_type": "function",
-        "content": "func ChunkSourceFile(file util.SourceFile, maxLines, overlap int) []Chunk { if strings.EqualFold(filepath.Ext(file.Path), \".go\") { chunks := chunkGoFile(file, maxLines) } }",
+        "content": "func ChunkSourceFile(file util.SourceFile, maxLines, overlap int) []Chunk { if strings.EqualFold(filepath.Ext(file.Path), \".go\") { chunks := chunkGoFile(file, maxLines); if len(chunks) > 0 { return chunks } }; return ChunkContent(file.Content, maxLines, overlap) }",
         "score": 0.68
       },
       {
         "file_path": "internal/service/chunker.go",
-        "start_line": 58,
-        "end_line": 79,
+        "start_line": 66,
+        "end_line": 98,
         "language": "go",
         "symbol_name": "chunkGoFile",
         "symbol_type": "function",
-        "content": "func chunkGoFile(file util.SourceFile, maxLines int) []Chunk { fset := token.NewFileSet(); parsed, err := parser.ParseFile(fset, file.Path, file.Content, parser.ParseComments); _ = parsed }",
+        "content": "func chunkGoFile(file util.SourceFile, maxLines int) []Chunk { fset := token.NewFileSet(); parsed, err := parser.ParseFile(fset, file.Path, file.Content, parser.ParseComments); for _, decl := range parsed.Decls { switch d := decl.(type) { case *ast.FuncDecl: chunks = append(chunks, goNodeChunk(...)); case *ast.GenDecl: } }; return chunks }",
         "score": 0.67
       }
     ]
   },
   {
-    "name": "prefer_stream_relay_alias",
-    "question": "Redis Stream 转发逻辑是怎么工作的？",
+    "name": "line_number_mapping",
+    "question": "goNodeChunk 里 fset 怎么把 AST 位置转换成行号？",
     "top_k": 1,
-    "expected_symbols": ["relayNewMessages"],
+    "expected_symbols": ["goNodeChunk"],
+    "candidates": [
+      {
+        "file_path": "internal/service/chunker.go",
+        "start_line": 121,
+        "end_line": 164,
+        "language": "go",
+        "symbol_name": "goNodeChunk",
+        "symbol_type": "function",
+        "content": "func goNodeChunk(fset *token.FileSet, lines []string, startPos, endPos token.Pos, symbolName, symbolType string, maxLines int) []Chunk { start := fset.Position(startPos).Line; end := fset.Position(endPos).Line; text := strings.TrimSpace(strings.Join(lines[start-1:end], \"\\n\")); return []Chunk{{StartLine: start, EndLine: end, Content: text}} }",
+        "score": 0.70
+      },
+      {
+        "file_path": "internal/service/indexer.go",
+        "start_line": 114,
+        "end_line": 135,
+        "language": "go",
+        "symbol_name": "chunkEmbeddingText",
+        "symbol_type": "function",
+        "content": "func chunkEmbeddingText(path string, chunk Chunk) string { b.WriteString(\"path: \"); b.WriteString(path); b.WriteString(chunk.Content); return b.String() }",
+        "score": 0.72
+      }
+    ]
+  },
+  {
+    "name": "embedding_batch",
+    "question": "批量 embedding 是怎么减少远程模型调用次数的？",
+    "top_k": 2,
+    "expected_symbols": ["IndexRepository", "EmbedBatch"],
+    "candidates": [
+      {
+        "file_path": "internal/service/embedder.go",
+        "start_line": 32,
+        "end_line": 42,
+        "language": "go",
+        "symbol_name": "Embed",
+        "symbol_type": "method",
+        "content": "func (e *Embedder) Embed(ctx context.Context, text string) ([]float64, error) { vectors, err := e.EmbedBatch(ctx, []string{text}); return vectors[0], err }",
+        "score": 0.78
+      },
+      {
+        "file_path": "internal/service/indexer.go",
+        "start_line": 54,
+        "end_line": 84,
+        "language": "go",
+        "symbol_name": "IndexRepository",
+        "symbol_type": "method",
+        "content": "for start := 0; start < len(inputs); start += batchSize { batch := inputs[start:end]; texts := make([]string, len(batch)); vectors, err := i.embedder.EmbedBatch(ctx, texts); for idx, input := range batch { record.EmbeddingVector = VectorLiteral(vectors[idx]) } }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/embedder.go",
+        "start_line": 43,
+        "end_line": 58,
+        "language": "go",
+        "symbol_name": "EmbedBatch",
+        "symbol_type": "method",
+        "content": "func (e *Embedder) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) { if e.cfg.EmbeddingProvider == \"remote\" { return e.embedRemoteBatch(ctx, texts) }; vectors := make([][]float64, len(texts)); return vectors, nil }",
+        "score": 0.67
+      }
+    ]
+  },
+  {
+    "name": "vector_literal",
+    "question": "VectorLiteral 是怎么把向量写入 pgvector 查询的？",
+    "top_k": 1,
+    "expected_symbols": ["VectorLiteral"],
+    "candidates": [
+      {
+        "file_path": "internal/service/retriever.go",
+        "start_line": 44,
+        "end_line": 69,
+        "language": "go",
+        "symbol_name": "Search",
+        "symbol_type": "method",
+        "content": "func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string, hints []string) ([]Citation, error) { embedding, err := r.embedder.Embed(ctx, expandedQuery); vector := VectorLiteral(embedding); rows, err := r.vectorSearch(ctx, repositoryID, vector, limit); return rows, err }",
+        "score": 0.72
+      },
+      {
+        "file_path": "internal/service/embedder.go",
+        "start_line": 224,
+        "end_line": 230,
+        "language": "go",
+        "symbol_name": "VectorLiteral",
+        "symbol_type": "function",
+        "content": "func VectorLiteral(vector []float64) string { parts := make([]string, len(vector)); for i, value := range vector { parts[i] = fmt.Sprintf(\"%.6f\", value) }; return \"[\" + strings.Join(parts, \",\") + \"]\" }",
+        "score": 0.69
+      }
+    ]
+  },
+  {
+    "name": "hybrid_retrieval_symbol",
+    "question": "keywordSearch 如何提升函数名和文件名查询稳定性？",
+    "top_k": 2,
+    "expected_symbols": ["keywordSearch", "boost"],
+    "candidates": [
+      {
+        "file_path": "internal/service/retriever.go",
+        "start_line": 72,
+        "end_line": 85,
+        "language": "go",
+        "symbol_name": "vectorSearch",
+        "symbol_type": "method",
+        "content": "func (r *Retriever) vectorSearch(ctx context.Context, repositoryID uint, vector string, limit int) ([]Citation, error) { ORDER BY embedding_vector <=> ?::vector LIMIT ? }",
+        "score": 0.82
+      },
+      {
+        "file_path": "internal/service/retriever.go",
+        "start_line": 88,
+        "end_line": 120,
+        "language": "go",
+        "symbol_name": "keywordSearch",
+        "symbol_type": "method",
+        "content": "func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, features searchFeatures, limit int) ([]Citation, error) { lower(file_path) LIKE ? OR lower(symbol_name) LIKE ? OR lower(content) LIKE ? }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/retriever.go",
+        "start_line": 122,
+        "end_line": 179,
+        "language": "go",
+        "symbol_name": "boost",
+        "symbol_type": "function",
+        "content": "func boost(rows []Citation, query string, hints []string) { if symbolName != \"\" && strings.Contains(queryLower, symbolName) { bonus += 0.30 }; if filePath == path || strings.HasSuffix(filePath, path) { bonus += 0.24 }; rows[i].Score += bonus }",
+        "score": 0.66
+      }
+    ]
+  },
+  {
+    "name": "diff_impact_analysis",
+    "question": "git diff 变更影响分析是怎么判断影响模块的？",
+    "top_k": 2,
+    "expected_symbols": ["Analyze", "localImpact", "matchDiffPaths"],
     "candidates": [
       {
         "file_path": "internal/service/answer.go",
-        "start_line": 1,
-        "end_line": 35,
+        "start_line": 30,
+        "end_line": 44,
         "language": "go",
         "symbol_name": "Ask",
         "symbol_type": "method",
-        "content": "func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question string) (*AskResponse, error) {}",
-        "score": 0.76
+        "content": "func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question string) (*AskResponse, error) { citations, err := s.retriever.Search(ctx, repositoryID, question, nil); return &AskResponse{Citations: citations}, err }",
+        "score": 0.83
       },
       {
-        "file_path": "mq/relay.go",
-        "start_line": 40,
-        "end_line": 96,
+        "file_path": "internal/service/impact.go",
+        "start_line": 35,
+        "end_line": 49,
         "language": "go",
-        "symbol_name": "relayNewMessages",
-        "symbol_type": "function",
-        "content": "func relayNewMessages(ctx context.Context) { XREADGROUP streams messages pending consumer group xack xadd redis stream relay }",
+        "symbol_name": "Analyze",
+        "symbol_type": "method",
+        "content": "func (s *ImpactService) Analyze(ctx context.Context, repositoryID uint, diffText string) (*ImpactResponse, error) { hints := util.ExtractDiffHints(diffText); citations, err := s.retriever.Search(ctx, repositoryID, diffText, hints); resp := localImpact(diffText, citations); return resp, nil }",
         "score": 0.69
+      },
+      {
+        "file_path": "internal/service/impact.go",
+        "start_line": 62,
+        "end_line": 84,
+        "language": "go",
+        "symbol_name": "localImpact",
+        "symbol_type": "function",
+        "content": "func localImpact(diffText string, citations []Citation) *ImpactResponse { changedPaths := util.ExtractDiffPaths(diffText); matchedPaths, unmatchedPaths := matchDiffPaths(changedPaths, citations); modules := uniquePaths(matchedCitations, 5); return &ImpactResponse{ImpactedModules: modules} }",
+        "score": 0.67
+      }
+    ]
+  },
+  {
+    "name": "repo_cache",
+    "question": "仓库状态 Redis 缓存是怎么读写的？",
+    "top_k": 2,
+    "expected_symbols": ["Get", "getRepoCache", "setRepoCache"],
+    "candidates": [
+      {
+        "file_path": "internal/service/github_fetcher.go",
+        "start_line": 54,
+        "end_line": 74,
+        "language": "go",
+        "symbol_name": "DownloadZip",
+        "symbol_type": "method",
+        "content": "func (f *GitHubFetcher) DownloadZip(ctx context.Context, ref GitHubRepoRef, destDir string) (string, error) { zipURL := fmt.Sprintf(\"https://github.com/%s/%s/archive/refs/heads/%s.zip\", ref.Owner, ref.Name, branch); return path, nil }",
+        "score": 0.82
+      },
+      {
+        "file_path": "internal/service/ingest.go",
+        "start_line": 86,
+        "end_line": 97,
+        "language": "go",
+        "symbol_name": "Get",
+        "symbol_type": "method",
+        "content": "func (s *IngestService) Get(ctx context.Context, id uint) (*model.Repository, error) { if repo, ok := s.getRepoCache(ctx, id); ok { return repo, nil }; var repo model.Repository; s.db.WithContext(ctx).First(&repo, id); s.setRepoCache(ctx, &repo); return &repo, nil }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/ingest.go",
+        "start_line": 185,
+        "end_line": 221,
+        "language": "go",
+        "symbol_name": "getRepoCache",
+        "symbol_type": "method",
+        "content": "func (s *IngestService) getRepoCache(ctx context.Context, id uint) (*model.Repository, bool) { data, err := s.rdb.Get(ctx, repoCacheKey(id)).Bytes(); json.Unmarshal(data, &repo); return &repo, true } func (s *IngestService) setRepoCache(ctx context.Context, repo *model.Repository) { s.rdb.Set(ctx, repoCacheKey(repo.ID), data, s.cfg.RepoCacheTTL) }",
+        "score": 0.67
+      }
+    ]
+  },
+  {
+    "name": "reindex_failure_keep_ready",
+    "question": "markFailedOrKeepReady 怎么在重新索引失败时保留旧索引？",
+    "top_k": 1,
+    "expected_symbols": ["markFailedOrKeepReady"],
+    "candidates": [
+      {
+        "file_path": "internal/service/ingest.go",
+        "start_line": 134,
+        "end_line": 161,
+        "language": "go",
+        "symbol_name": "markFailedOrKeepReady",
+        "symbol_type": "method",
+        "content": "func (s *IngestService) markFailedOrKeepReady(ctx context.Context, repoID uint, message string) { var chunkCount int64; s.db.Model(&model.CodeChunk{}).Where(\"repository_id = ?\", repoID).Count(&chunkCount); if chunkCount == 0 { s.updateStatus(ctx, repoID, \"failed\", message); return }; Updates(map[string]interface{}{\"status\": \"ready\", \"error_message\": \"上次重新索引失败，继续使用已有索引：\" + message}) }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/indexer.go",
+        "start_line": 91,
+        "end_line": 107,
+        "language": "go",
+        "symbol_name": "IndexRepository",
+        "symbol_type": "method",
+        "content": "if err := i.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error { tx.Where(\"repository_id = ?\", repo.ID).Delete(&model.CodeChunk{}); return tx.Create(&records).Error }); err != nil { return IndexStats{}, err }",
+        "score": 0.72
+      }
+    ]
+  },
+  {
+    "name": "github_proxy_download",
+    "question": "downloadURL 怎么用 GITHUB_PROXY_URL 拼接 GitHub 下载地址？",
+    "top_k": 1,
+    "expected_symbols": ["downloadURL"],
+    "candidates": [
+      {
+        "file_path": "internal/config/config.go",
+        "start_line": 34,
+        "end_line": 64,
+        "language": "go",
+        "symbol_name": "Load",
+        "symbol_type": "function",
+        "content": "func Load() Config { return Config{GitHubProxyURL: strings.TrimRight(getenv(\"GITHUB_PROXY_URL\", \"\"), \"/\")} }",
+        "score": 0.70
+      },
+      {
+        "file_path": "internal/service/github_fetcher.go",
+        "start_line": 76,
+        "end_line": 81,
+        "language": "go",
+        "symbol_name": "downloadURL",
+        "symbol_type": "method",
+        "content": "func (f *GitHubFetcher) downloadURL(rawURL string) string { if f.cfg.GitHubProxyURL == \"\" { return rawURL }; return f.cfg.GitHubProxyURL + \"/\" + rawURL }",
+        "score": 0.68
+      }
+    ]
+  },
+  {
+    "name": "llm_call",
+    "question": "callLLM 函数是怎么调用大模型接口的？",
+    "top_k": 1,
+    "expected_symbols": ["callLLM"],
+    "candidates": [
+      {
+        "file_path": "internal/service/embedder.go",
+        "start_line": 96,
+        "end_line": 156,
+        "language": "go",
+        "symbol_name": "embedRemoteBatch",
+        "symbol_type": "method",
+        "content": "func (e *Embedder) embedRemoteBatch(ctx context.Context, texts []string) ([][]float64, error) { endpoint := strings.TrimRight(e.cfg.OpenAIBaseURL, \"/\") + \"/embeddings\"; req.Header.Set(\"Authorization\", \"Bearer \"+e.cfg.OpenAIAPIKey); resp, err := e.client.Do(req) }",
+        "score": 0.81
+      },
+      {
+        "file_path": "internal/service/llm.go",
+        "start_line": 32,
+        "end_line": 79,
+        "language": "go",
+        "symbol_name": "callLLM",
+        "symbol_type": "function",
+        "content": "func callLLM(ctx context.Context, cfg config.Config, system, user string) (string, error) { body, err := json.Marshal(chatRequest{Model: cfg.OpenAIModel, Messages: []chatMessage{{Role: \"system\", Content: system}, {Role: \"user\", Content: user}}}); endpoint := strings.TrimRight(cfg.OpenAIBaseURL, \"/\") + \"/chat/completions\"; req.Header.Set(\"Authorization\", \"Bearer \"+cfg.OpenAIAPIKey); resp, err := client.Do(req); json.NewDecoder(resp.Body).Decode(&decoded); return strings.TrimSpace(decoded.Choices[0].Message.Content), nil }",
+        "score": 0.69
+      }
+    ]
+  },
+  {
+    "name": "ask_citation_prompt",
+    "question": "RAG 问答怎么把代码依据注入 prompt？",
+    "top_k": 2,
+    "expected_symbols": ["Ask", "codeAnswerUserPrompt"],
+    "candidates": [
+      {
+        "file_path": "internal/service/impact.go",
+        "start_line": 268,
+        "end_line": 298,
+        "language": "go",
+        "symbol_name": "impactUserPrompt",
+        "symbol_type": "function",
+        "content": "func impactUserPrompt(diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string { b.WriteString(\"代码变更 diff：\"); b.WriteString(diffText); b.WriteString(\"相关代码片段：\"); return b.String() }",
+        "score": 0.80
+      },
+      {
+        "file_path": "internal/service/answer.go",
+        "start_line": 30,
+        "end_line": 44,
+        "language": "go",
+        "symbol_name": "Ask",
+        "symbol_type": "method",
+        "content": "func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question string) (*AskResponse, error) { citations, err := s.retriever.Search(ctx, repositoryID, question, nil); answer := s.localAnswer(question, citations); generated, err := callLLM(ctx, s.cfg, codeAnswerSystemPrompt(), codeAnswerUserPrompt(question, citations)); return &AskResponse{Answer: answer, Citations: citations}, nil }",
+        "score": 0.69
+      },
+      {
+        "file_path": "internal/service/answer.go",
+        "start_line": 82,
+        "end_line": 98,
+        "language": "go",
+        "symbol_name": "codeAnswerUserPrompt",
+        "symbol_type": "function",
+        "content": "func codeAnswerUserPrompt(question string, citations []Citation) string { b.WriteString(\"用户问题：\"); b.WriteString(question); b.WriteString(\"相关代码片段：\"); for i, c := range promptCitations(citations) { b.WriteString(c.FilePath); b.WriteString(c.Content) }; return b.String() }",
+        "score": 0.67
       }
     ]
   }

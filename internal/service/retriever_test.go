@@ -110,6 +110,7 @@ func TestMergeCitationsDeduplicatesByID(t *testing.T) {
 
 func TestRetrievalEvalSet(t *testing.T) {
 	cases := loadRetrievalEvalCases(t)
+	var hits int
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			rows := append([]Citation(nil), tc.Candidates...)
@@ -122,7 +123,13 @@ func TestRetrievalEvalSet(t *testing.T) {
 			if !containsAnyExpectedSymbol(rows[:topK], tc.ExpectedSymbols) {
 				t.Fatalf("top %d symbols = %v, want one of %v", topK, citationSymbols(rows[:topK]), tc.ExpectedSymbols)
 			}
+			hits++
 		})
+	}
+	hitRate := float64(hits) / float64(len(cases))
+	t.Logf("retrieval eval topK hit rate: %.2f (%d/%d)", hitRate, hits, len(cases))
+	if hitRate < 0.90 {
+		t.Fatalf("retrieval eval hit rate = %.2f, want >= 0.90", hitRate)
 	}
 }
 
