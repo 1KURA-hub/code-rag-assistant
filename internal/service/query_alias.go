@@ -65,7 +65,7 @@ func expandQueryText(query string, hints []string) string {
 
 func matchedAliases(text string) []string {
 	lower := strings.ToLower(text)
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	var aliases []string
 	for _, group := range queryAliases {
 		matched := false
@@ -79,8 +79,8 @@ func matchedAliases(text string) []string {
 			continue
 		}
 		for _, alias := range group.Aliases {
-			if !seen[alias] {
-				seen[alias] = true
+			if _, ok := seen[alias]; !ok {
+				seen[alias] = struct{}{}
 				aliases = append(aliases, alias)
 			}
 		}

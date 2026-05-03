@@ -183,31 +183,31 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	features := searchFeatures{
 		Terms: rerankTerms(query, hints),
 	}
-	seenPaths := map[string]bool{}
-	seenSymbols := map[string]bool{}
-	seenLanguages := map[string]bool{}
+	seenPaths := map[string]struct{}{}
+	seenSymbols := map[string]struct{}{}
+	seenLanguages := map[string]struct{}{}
 
 	addPath := func(path string) {
 		path = strings.ToLower(strings.Trim(path, "`'\"，。；,;()[]{}<>"))
-		if path == "" || seenPaths[path] {
+		if _, ok := seenPaths[path]; path == "" || ok {
 			return
 		}
-		seenPaths[path] = true
+		seenPaths[path] = struct{}{}
 		features.Paths = append(features.Paths, path)
 	}
 	addSymbol := func(symbol string) {
 		symbol = strings.ToLower(strings.Trim(symbol, "`'\"，。；,;()[]{}<>"))
-		if len(symbol) < 3 || seenSymbols[symbol] {
+		if _, ok := seenSymbols[symbol]; len(symbol) < 3 || ok {
 			return
 		}
-		seenSymbols[symbol] = true
+		seenSymbols[symbol] = struct{}{}
 		features.Symbols = append(features.Symbols, symbol)
 	}
 	addLanguage := func(language string) {
-		if language == "" || seenLanguages[language] {
+		if _, ok := seenLanguages[language]; language == "" || ok {
 			return
 		}
-		seenLanguages[language] = true
+		seenLanguages[language] = struct{}{}
 		features.Languages = append(features.Languages, language)
 	}
 
@@ -239,14 +239,14 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 }
 
 func rerankTerms(query string, hints []string) []string {
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	var terms []string
 	add := func(term string) {
 		term = strings.ToLower(strings.TrimSpace(term))
-		if len([]rune(term)) < 2 || seen[term] {
+		if _, ok := seen[term]; len([]rune(term)) < 2 || ok {
 			return
 		}
-		seen[term] = true
+		seen[term] = struct{}{}
 		terms = append(terms, term)
 	}
 
@@ -266,14 +266,14 @@ func rerankTerms(query string, hints []string) []string {
 }
 
 func keywordSearchTerms(features searchFeatures) []string {
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	var terms []string
 	add := func(term string) {
 		term = strings.ToLower(strings.TrimSpace(term))
-		if len([]rune(term)) < 2 || len([]rune(term)) > 60 || seen[term] || isWeakKeyword(term) {
+		if _, ok := seen[term]; len([]rune(term)) < 2 || len([]rune(term)) > 60 || ok || isWeakKeyword(term) {
 			return
 		}
-		seen[term] = true
+		seen[term] = struct{}{}
 		terms = append(terms, term)
 	}
 	for _, path := range features.Paths {
