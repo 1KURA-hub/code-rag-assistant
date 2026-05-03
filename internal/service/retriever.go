@@ -378,7 +378,10 @@ func isSymbolLike(term string) bool {
 			return false
 		}
 	}
-	return strings.Contains(term, "_") || strings.Contains(term, ".") || hasUppercase(term)
+	return strings.Contains(term, "_") ||
+		strings.Contains(term, ".") ||
+		hasUppercase(term) ||
+		isLowercaseIdentifier(term)
 }
 
 func hasUppercase(term string) bool {
@@ -388,6 +391,18 @@ func hasUppercase(term string) bool {
 		}
 	}
 	return false
+}
+
+func isLowercaseIdentifier(term string) bool {
+	if len([]rune(term)) < 4 {
+		return false
+	}
+	for _, r := range term {
+		if !unicode.IsLower(r) && !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func isWeakKeyword(term string) bool {

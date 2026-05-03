@@ -94,6 +94,19 @@ func TestKeywordSearchTermsIncludePathsAndSymbols(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSearchFeaturesTreatsLowercaseIdentifiersAsSymbols(t *testing.T) {
+	features := analyzeSearchFeatures("index函数和reclaim逻辑怎么实现", nil)
+
+	for _, want := range []string{"index", "reclaim"} {
+		if !containsString(features.Symbols, want) {
+			t.Fatalf("features.Symbols = %v, want %q", features.Symbols, want)
+		}
+	}
+	if containsString(features.Symbols, "id") {
+		t.Fatalf("features.Symbols = %v, should not include short identifier %q", features.Symbols, "id")
+	}
+}
+
 func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 	cases := []struct {
 		name  string
