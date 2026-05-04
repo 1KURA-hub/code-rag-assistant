@@ -180,13 +180,21 @@ func boost(rows []Citation, query string, hints []string) {
 
 func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	text := query + "\n" + strings.Join(hints, "\n")
-	features := searchFeatures{
-		Terms: rerankTerms(query, hints),
-	}
+	rawTerms := splitSearchTerms(text)
+	features := searchFeatures{}
+	seenTerms := map[string]struct{}{}
 	seenPaths := map[string]struct{}{}
 	seenSymbols := map[string]struct{}{}
 	seenLanguages := map[string]struct{}{}
 
+	addTerm := func(term string) {
+		term = strings.ToLower(strings.TrimSpace(term))
+		if _, ok := seenTerms[term]; len([]rune(term)) < 2 || ok {
+			return
+		}
+		seenTerms[term] = struct{}{}
+		features.Terms = append(features.Terms, term)
+	}
 	addPath := func(path string) {
 		path = strings.ToLower(strings.Trim(path, "`'\"，。；,;()[]{}<>"))
 		if _, ok := seenPaths[path]; path == "" || ok {
@@ -211,7 +219,8 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 		features.Languages = append(features.Languages, language)
 	}
 
-	for _, term := range splitSearchTerms(text) {
+	for _, term := range rawTerms {
+		addTerm(term)
 		lower := strings.ToLower(term)
 		if isPathLike(lower) {
 			addPath(lower)
@@ -219,6 +228,9 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 		if isSymbolLike(term) {
 			addSymbol(term)
 		}
+	}
+	for _, alias := range matchedAliases(text) {
+		addTerm(alias)
 	}
 
 	lowerText := strings.ToLower(text)
@@ -236,33 +248,6 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	}
 
 	return features
-}
-
-func rerankTerms(query string, hints []string) []string {
-	seen := map[string]struct{}{}
-	var terms []string
-	add := func(term string) {
-		term = strings.ToLower(strings.TrimSpace(term))
-		if _, ok := seen[term]; len([]rune(term)) < 2 || ok {
-			return
-		}
-		seen[term] = struct{}{}
-		terms = append(terms, term)
-	}
-
-	for _, term := range splitSearchTerms(query) {
-		add(term)
-	}
-	for _, hint := range hints {
-		add(hint)
-		for _, term := range splitSearchTerms(hint) {
-			add(term)
-		}
-	}
-	for _, alias := range matchedAliases(query + "\n" + strings.Join(hints, "\n")) {
-		add(alias)
-	}
-	return terms
 }
 
 func keywordSearchTerms(features searchFeatures) []string {
