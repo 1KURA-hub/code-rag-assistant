@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"unicode"
@@ -30,6 +31,8 @@ type searchFeatures struct {
 	Symbols   []string
 	Languages []string
 }
+
+const rrfK = 60.0
 
 type Retriever struct {
 	db       *gorm.DB
@@ -61,7 +64,7 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 	if err != nil {
 		return nil, err
 	}
-	rows = mergeCitations(rows, keywordRows)
+	rows = fuseCitationsRRF(rows, keywordRows)
 	boost(rows, query, features)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
@@ -313,22 +316,28 @@ func keywordContentTerms(features searchFeatures) []string {
 	return terms
 }
 
-func mergeCitations(groups ...[]Citation) []Citation {
+func fuseCitationsRRF(groups ...[]Citation) []Citation {
 	seen := map[string]int{}
 	var merged []Citation
 	for _, group := range groups {
-		for _, row := range group {
+		for rank, row := range group {
 			key := citationKey(row)
+			rrfScore := 1 / (rrfK + float64(rank+1))
 			if idx, ok := seen[key]; ok {
-				if row.Score > merged[idx].Score {
-					merged[idx].Score = row.Score
-				}
+				merged[idx].Score += rrfScore
 				continue
 			}
+			row.Score = rrfScore
 			seen[key] = len(merged)
 			merged = append(merged, row)
 		}
 	}
+	sort.SliceStable(merged, func(i, j int) bool {
+		if math.Abs(merged[i].Score-merged[j].Score) < 1e-12 {
+			return merged[i].ID < merged[j].ID
+		}
+		return merged[i].Score > merged[j].Score
+	})
 	return merged
 }
 

@@ -203,17 +203,20 @@ func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 	}
 }
 
-func TestMergeCitationsDeduplicatesByID(t *testing.T) {
-	rows := mergeCitations(
-		[]Citation{{ID: 1, FilePath: "a.go", Score: 0.3}},
-		[]Citation{{ID: 1, FilePath: "a.go", Score: 0.8}, {ID: 2, FilePath: "b.go", Score: 0.5}},
+func TestFuseCitationsRRFBoostsChunksFoundByMultipleRetrievers(t *testing.T) {
+	rows := fuseCitationsRRF(
+		[]Citation{{ID: 1, FilePath: "a.go"}, {ID: 2, FilePath: "b.go"}},
+		[]Citation{{ID: 2, FilePath: "b.go"}, {ID: 3, FilePath: "c.go"}},
 	)
 
-	if len(rows) != 2 {
-		t.Fatalf("len(rows) = %d, want 2", len(rows))
+	if len(rows) != 3 {
+		t.Fatalf("len(rows) = %d, want 3", len(rows))
 	}
-	if rows[0].Score != 0.8 {
-		t.Fatalf("deduped score = %.2f, want 0.80", rows[0].Score)
+	if rows[0].ID != 2 {
+		t.Fatalf("first fused row ID = %d, want duplicate chunk 2", rows[0].ID)
+	}
+	if rows[0].Score <= rows[1].Score {
+		t.Fatalf("duplicate chunk score = %.6f, want greater than %.6f", rows[0].Score, rows[1].Score)
 	}
 }
 
