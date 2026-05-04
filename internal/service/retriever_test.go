@@ -126,6 +126,22 @@ func TestAnalyzeSearchFeaturesTreatsLanguageWordsAsLanguages(t *testing.T) {
 	}
 }
 
+func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
+	features := analyzeSearchFeatures("mq/consumer.go里的reclaim函数怎么处理死信", nil)
+	terms := keywordContentTerms(features)
+
+	for _, excluded := range []string{"mq/consumer.go", "reclaim"} {
+		if containsString(terms, excluded) {
+			t.Fatalf("keywordContentTerms() = %v, should not include strong feature %q", terms, excluded)
+		}
+	}
+	for _, want := range []string{"deadletter", "dlq"} {
+		if !containsString(terms, want) {
+			t.Fatalf("keywordContentTerms() = %v, want alias term %q", terms, want)
+		}
+	}
+}
+
 func TestAnalyzeSearchFeaturesDetectsMultipleLanguages(t *testing.T) {
 	features := analyzeSearchFeatures("go文件和yaml配置怎么关联，json响应在哪里", nil)
 

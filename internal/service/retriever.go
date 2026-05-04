@@ -86,21 +86,28 @@ func (r *Retriever) vectorSearch(ctx context.Context, repositoryID uint, vector 
 }
 
 func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, features searchFeatures, limit int) ([]Citation, error) {
-	terms := keywordSearchTerms(features)
-	if (len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
+	terms := keywordContentTerms(features)
+	if (len(features.Paths) == 0 && len(features.Symbols) == 0 && len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
 		return nil, nil
 	}
 
 	var clauses []string
 	args := []any{repositoryID}
-	for _, term := range terms {
+	addLike := func(field string, term string) {
 		pattern := "%" + strings.ToLower(term) + "%"
-		clauses = append(clauses, "lower(file_path) LIKE ?")
+		clauses = append(clauses, fmt.Sprintf("lower(%s) LIKE ?", field))
 		args = append(args, pattern)
-		clauses = append(clauses, "lower(symbol_name) LIKE ?")
-		args = append(args, pattern)
-		clauses = append(clauses, "lower(content) LIKE ?")
-		args = append(args, pattern)
+	}
+	for _, path := range features.Paths {
+		addLike("file_path", path)
+	}
+	for _, symbol := range features.Symbols {
+		addLike("symbol_name", symbol)
+	}
+	for _, term := range terms {
+		addLike("file_path", term)
+		addLike("symbol_name", term)
+		addLike("content", term)
 	}
 	for _, language := range features.Languages {
 		clauses = append(clauses, "lower(language) = ?")
@@ -275,6 +282,30 @@ func keywordSearchTerms(features searchFeatures) []string {
 	}
 	for _, term := range features.Terms {
 		add(term)
+		if len(terms) >= 16 {
+			break
+		}
+	}
+	return terms
+}
+
+func keywordContentTerms(features searchFeatures) []string {
+	seen := map[string]struct{}{}
+	for _, path := range features.Paths {
+		seen[path] = struct{}{}
+	}
+	for _, symbol := range features.Symbols {
+		seen[symbol] = struct{}{}
+	}
+
+	var terms []string
+	for _, term := range features.Terms {
+		term = strings.ToLower(strings.TrimSpace(term))
+		if _, ok := seen[term]; len([]rune(term)) < 2 || len([]rune(term)) > 60 || ok || isWeakKeyword(term) {
+			continue
+		}
+		seen[term] = struct{}{}
+		terms = append(terms, term)
 		if len(terms) >= 16 {
 			break
 		}
