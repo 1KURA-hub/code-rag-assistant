@@ -126,6 +126,19 @@ func TestAnalyzeSearchFeaturesTreatsLanguageWordsAsLanguages(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSearchFeaturesKeepsTechWordsAsTerms(t *testing.T) {
+	features := analyzeSearchFeatures("redis stream 和 rabbitmq 的 jwt 逻辑", nil)
+
+	for _, word := range []string{"redis", "stream", "rabbitmq", "jwt"} {
+		if containsString(features.Symbols, word) {
+			t.Fatalf("features.Symbols = %v, should not include tech word %q", features.Symbols, word)
+		}
+		if !containsString(features.Terms, word) {
+			t.Fatalf("features.Terms = %v, want tech word %q", features.Terms, word)
+		}
+	}
+}
+
 func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
 	features := analyzeSearchFeatures("mq/consumer.go里的reclaim函数怎么处理死信", nil)
 	terms := keywordContentTerms(features)

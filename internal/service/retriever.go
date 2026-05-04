@@ -432,7 +432,9 @@ func isLowercaseIdentifier(term string) bool {
 
 func isReservedSearchWord(term string) bool {
 	switch strings.ToLower(term) {
-	case "go", "golang", "yaml", "yml", "json", "sql", "dockerfile":
+	case "go", "golang", "yaml", "yml", "json", "sql", "dockerfile",
+		"redis", "rabbitmq", "mysql", "postgres", "postgresql", "pgvector",
+		"jwt", "lua", "stream", "cache", "http", "api", "docker", "gorm", "gin":
 		return true
 	default:
 		return false
