@@ -237,16 +237,19 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	}
 
 	lowerText := strings.ToLower(text)
-	switch {
-	case strings.Contains(lowerText, "golang") || strings.Contains(lowerText, "go 文件") || strings.Contains(lowerText, "go文件"):
+	if strings.Contains(lowerText, "golang") || strings.Contains(lowerText, "go 文件") || strings.Contains(lowerText, "go文件") {
 		addLanguage("go")
-	case strings.Contains(lowerText, "dockerfile"):
+	}
+	if strings.Contains(lowerText, "dockerfile") {
 		addLanguage("dockerfile")
-	case strings.Contains(lowerText, "yaml") || strings.Contains(lowerText, "yml"):
+	}
+	if strings.Contains(lowerText, "yaml") || strings.Contains(lowerText, "yml") {
 		addLanguage("yaml")
-	case strings.Contains(lowerText, "json"):
+	}
+	if strings.Contains(lowerText, "json") {
 		addLanguage("json")
-	case strings.Contains(lowerText, "sql"):
+	}
+	if strings.Contains(lowerText, "sql") {
 		addLanguage("sql")
 	}
 

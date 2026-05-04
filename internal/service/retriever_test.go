@@ -126,6 +126,16 @@ func TestAnalyzeSearchFeaturesTreatsLanguageWordsAsLanguages(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSearchFeaturesDetectsMultipleLanguages(t *testing.T) {
+	features := analyzeSearchFeatures("go文件和yaml配置怎么关联，json响应在哪里", nil)
+
+	for _, want := range []string{"go", "yaml", "json"} {
+		if !containsString(features.Languages, want) {
+			t.Fatalf("features.Languages = %v, want %q", features.Languages, want)
+		}
+	}
+}
+
 func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 	cases := []struct {
 		name  string
