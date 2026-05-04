@@ -25,7 +25,8 @@ func TestBoostPrioritizesSymbolNameMentionedInQuery(t *testing.T) {
 		},
 	}
 
-	boost(rows, "CreateAndIndex 是怎么实现的", nil)
+	query := "CreateAndIndex 是怎么实现的"
+	boost(rows, query, analyzeSearchFeatures(query, nil))
 
 	if rows[0].SymbolName != "CreateAndIndex" {
 		t.Fatalf("boost() ranked %q first, want CreateAndIndex", rows[0].SymbolName)
@@ -50,7 +51,8 @@ func TestBoostPrioritizesFilePathMentionedInQuery(t *testing.T) {
 		},
 	}
 
-	boost(rows, "mq/consumer.go 里的重试逻辑是什么", nil)
+	query := "mq/consumer.go 里的重试逻辑是什么"
+	boost(rows, query, analyzeSearchFeatures(query, nil))
 
 	if rows[0].FilePath != "mq/consumer.go" {
 		t.Fatalf("boost() ranked %q first, want mq/consumer.go", rows[0].FilePath)
@@ -76,7 +78,8 @@ func TestBoostPrioritizesLanguageMentionedInQuery(t *testing.T) {
 		},
 	}
 
-	boost(rows, "Go 文件是怎么分片的", nil)
+	query := "Go 文件是怎么分片的"
+	boost(rows, query, analyzeSearchFeatures(query, nil))
 
 	if rows[0].Language != "go" {
 		t.Fatalf("boost() ranked language %q first, want go", rows[0].Language)
@@ -181,7 +184,7 @@ func TestRetrievalEvalSet(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			rows := append([]Citation(nil), tc.Candidates...)
-			boost(rows, tc.Question, tc.Hints)
+			boost(rows, tc.Question, analyzeSearchFeatures(tc.Question, tc.Hints))
 
 			topK := tc.TopK
 			if topK <= 0 || topK > len(rows) {

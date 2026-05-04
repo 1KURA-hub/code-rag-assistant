@@ -62,7 +62,7 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 		return nil, err
 	}
 	rows = mergeCitations(rows, keywordRows)
-	boost(rows, query, hints)
+	boost(rows, query, features)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}
@@ -123,8 +123,7 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 	return rows, nil
 }
 
-func boost(rows []Citation, query string, hints []string) {
-	features := analyzeSearchFeatures(query, hints)
+func boost(rows []Citation, query string, features searchFeatures) {
 	terms := features.Terms
 	queryLower := strings.ToLower(query)
 
