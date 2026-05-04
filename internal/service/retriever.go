@@ -87,7 +87,7 @@ func (r *Retriever) vectorSearch(ctx context.Context, repositoryID uint, vector 
 
 func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, features searchFeatures, limit int) ([]Citation, error) {
 	terms := keywordSearchTerms(features)
-	if len(terms) == 0 || limit <= 0 {
+	if (len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
 		return nil, nil
 	}
 
@@ -101,6 +101,10 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 		args = append(args, pattern)
 		clauses = append(clauses, "lower(content) LIKE ?")
 		args = append(args, pattern)
+	}
+	for _, language := range features.Languages {
+		clauses = append(clauses, "lower(language) = ?")
+		args = append(args, strings.ToLower(language))
 	}
 	args = append(args, limit)
 
@@ -355,6 +359,9 @@ func isPathLike(term string) bool {
 }
 
 func isSymbolLike(term string) bool {
+	if isReservedSearchWord(term) {
+		return false
+	}
 	if strings.Contains(term, "/") || strings.Contains(term, ".go") {
 		return false
 	}
@@ -390,9 +397,18 @@ func isLowercaseIdentifier(term string) bool {
 	return true
 }
 
+func isReservedSearchWord(term string) bool {
+	switch strings.ToLower(term) {
+	case "go", "golang", "yaml", "yml", "json", "sql", "dockerfile":
+		return true
+	default:
+		return false
+	}
+}
+
 func isWeakKeyword(term string) bool {
 	switch term {
-	case "go", "golang", "func", "type", "var", "const", "这个", "项目", "代码", "逻辑", "什么", "怎么", "如何":
+	case "go", "golang", "yaml", "yml", "json", "sql", "dockerfile", "func", "type", "var", "const", "这个", "项目", "代码", "逻辑", "什么", "怎么", "如何":
 		return true
 	default:
 		return false

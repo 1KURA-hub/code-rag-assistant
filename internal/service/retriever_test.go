@@ -107,6 +107,22 @@ func TestAnalyzeSearchFeaturesTreatsLowercaseIdentifiersAsSymbols(t *testing.T) 
 	}
 }
 
+func TestAnalyzeSearchFeaturesTreatsLanguageWordsAsLanguages(t *testing.T) {
+	features := analyzeSearchFeatures("yaml文件是干什么的", nil)
+
+	if !containsString(features.Languages, "yaml") {
+		t.Fatalf("features.Languages = %v, want yaml", features.Languages)
+	}
+	if containsString(features.Symbols, "yaml") {
+		t.Fatalf("features.Symbols = %v, should not include language word yaml", features.Symbols)
+	}
+
+	terms := keywordSearchTerms(features)
+	if containsString(terms, "yaml") {
+		t.Fatalf("keywordSearchTerms() = %v, should not include language word yaml", terms)
+	}
+}
+
 func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 	cases := []struct {
 		name  string
