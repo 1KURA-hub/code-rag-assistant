@@ -35,9 +35,11 @@ GitHub URL
 
 ```text
 用户问题
+-> 提取文件路径、函数名、语言和普通关键词
 -> 问题 embedding
--> pgvector 召回候选代码片段
--> 根据函数名、文件路径、关键词 rerank
+-> pgvector 向量召回候选代码片段
+-> PostgreSQL 全文检索召回代码内容关键词
+-> RRF 融合重排
 -> 组织 prompt
 -> 调用大模型生成回答
 -> 返回 answer + citations
@@ -63,15 +65,15 @@ Go 文件使用 `go/parser` 和 `go/ast` 解析源码结构，优先按函数、
 
 ### 向量存储
 
-项目只使用 PostgreSQL 作为主数据库，并通过 pgvector 扩展存储代码向量。`repositories` 保存仓库状态和统计信息，`code_chunks` 保存代码片段、文件路径、行号、符号名、源码内容和 embedding 向量。
+项目只使用 PostgreSQL 作为主数据库，并通过 pgvector 扩展存储代码向量。`repositories` 保存仓库状态和统计信息，`code_chunks` 保存代码片段、文件路径、行号、符号名、源码内容、embedding 向量和全文检索向量。
 
 问答时根据 `repository_id` 限定检索范围，再按向量距离召回相关片段。
 
 ### 检索重排
 
-基础召回使用 pgvector 的余弦距离。为了提升代码场景下的命中率，检索会先扩大候选数量，再根据用户问题中的函数名、文件路径和关键词进行 rerank。
+基础召回使用 pgvector 的余弦距离。为了提升代码场景下的命中率，系统会同时进行字段关键词召回和 PostgreSQL full-text search：文件路径查 `file_path`，函数名或变量名查 `symbol_name`，语言查 `language`，普通代码关键词查 `search_vector`。
 
-例如用户明确询问 `CreateAndIndex` 时，`symbol_name` 命中的分片会获得更高排序权重。
+两路召回结果通过 RRF 融合重排。如果同一个代码分片同时被向量检索和关键词检索命中，它会获得更高的最终排序分数。
 
 ### 异步索引和状态流转
 
