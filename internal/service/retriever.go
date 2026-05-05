@@ -88,17 +88,38 @@ func (r *Retriever) vectorSearch(ctx context.Context, repositoryID uint, vector 
 }
 
 func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, features searchFeatures, limit int) ([]Citation, error) {
+	query, args := buildKeywordSearchQuery(repositoryID, features, limit)
+	if query == "" {
+		return nil, nil
+	}
+	var rows []Citation
+	err := r.db.WithContext(ctx).Raw(query, args...).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit int) (string, []any) {
 	terms := keywordContentTerms(features)
 	if (len(features.Paths) == 0 && len(features.Symbols) == 0 && len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
-		return nil, nil
+		return "", nil
 	}
 
 	var clauses []string
-	args := []any{repositoryID}
+	var rankParts []string
+	var rankArgs []any
+	whereArgs := []any{repositoryID}
+	addFullText := func(term string) {
+		clauses = append(clauses, "search_vector @@ plainto_tsquery('simple', ?)")
+		whereArgs = append(whereArgs, term)
+		rankParts = append(rankParts, "ts_rank(search_vector, plainto_tsquery('simple', ?))")
+		rankArgs = append(rankArgs, term)
+	}
 	addLike := func(field string, term string) {
 		pattern := "%" + strings.ToLower(term) + "%"
 		clauses = append(clauses, fmt.Sprintf("lower(%s) LIKE ?", field))
-		args = append(args, pattern)
+		whereArgs = append(whereArgs, pattern)
 	}
 	for _, path := range features.Paths {
 		addLike("file_path", path)
@@ -109,27 +130,29 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 	for _, term := range terms {
 		addLike("file_path", term)
 		addLike("symbol_name", term)
-		addLike("content", term)
+		addFullText(term)
 	}
 	for _, language := range features.Languages {
 		clauses = append(clauses, "lower(language) = ?")
-		args = append(args, strings.ToLower(language))
+		whereArgs = append(whereArgs, strings.ToLower(language))
 	}
+	scoreSQL := "0.45"
+	if len(rankParts) > 0 {
+		scoreSQL += " + " + strings.Join(rankParts, " + ")
+	}
+	args := append([]any{}, rankArgs...)
+	args = append(args, whereArgs...)
 	args = append(args, limit)
 
-	var rows []Citation
-	err := r.db.WithContext(ctx).Raw(fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT id, file_path, start_line, end_line, language, symbol_name, symbol_type, content,
-		       0.45 AS score
+		       %s AS score
 		FROM code_chunks
 		WHERE repository_id = ? AND (%s)
-		ORDER BY id
+		ORDER BY score DESC, id
 		LIMIT ?
-	`, strings.Join(clauses, " OR ")), args...).Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	return rows, nil
+	`, scoreSQL, strings.Join(clauses, " OR "))
+	return query, args
 }
 
 func analyzeSearchFeatures(query string, hints []string) searchFeatures {

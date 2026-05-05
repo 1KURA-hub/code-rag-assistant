@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -73,6 +74,24 @@ func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
 		if !containsString(terms, want) {
 			t.Fatalf("keywordContentTerms() = %v, want alias term %q", terms, want)
 		}
+	}
+}
+
+func TestBuildKeywordSearchQueryUsesFullTextForContentTerms(t *testing.T) {
+	features := analyzeSearchFeatures("redis stream 重试逻辑", nil)
+	query, args := buildKeywordSearchQuery(7, features, 10)
+
+	if !strings.Contains(query, "search_vector @@ plainto_tsquery('simple', ?)") {
+		t.Fatalf("keyword query = %s, want full-text search condition", query)
+	}
+	if !strings.Contains(query, "ts_rank(search_vector, plainto_tsquery('simple', ?))") {
+		t.Fatalf("keyword query = %s, want full-text rank", query)
+	}
+	if !strings.Contains(query, "ORDER BY score DESC, id") {
+		t.Fatalf("keyword query = %s, want score ordering", query)
+	}
+	if len(args) == 0 {
+		t.Fatal("keyword query args are empty")
 	}
 }
 
