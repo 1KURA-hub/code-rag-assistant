@@ -65,7 +65,6 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 		return nil, err
 	}
 	rows = fuseCitationsRRF(rows, keywordRows)
-	boost(rows, query, features)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}
@@ -131,64 +130,6 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 		return nil, err
 	}
 	return rows, nil
-}
-
-func boost(rows []Citation, query string, features searchFeatures) {
-	terms := features.Terms
-	queryLower := strings.ToLower(query)
-
-	for i := range rows {
-		var bonus float64
-		filePath := strings.ToLower(rows[i].FilePath)
-		symbolName := strings.ToLower(rows[i].SymbolName)
-		symbolType := strings.ToLower(rows[i].SymbolType)
-		content := strings.ToLower(rows[i].Content)
-		language := strings.ToLower(rows[i].Language)
-
-		if symbolName != "" && strings.Contains(queryLower, symbolName) {
-			bonus += 0.30
-		}
-		for _, path := range features.Paths {
-			if filePath == path || strings.HasSuffix(filePath, "/"+path) || strings.HasSuffix(filePath, path) {
-				bonus += 0.24
-				break
-			}
-		}
-		for _, symbol := range features.Symbols {
-			if symbolName == symbol {
-				bonus += 0.25
-				break
-			}
-		}
-		for _, lang := range features.Languages {
-			if language == lang {
-				bonus += 0.06
-				break
-			}
-		}
-		if symbolType == "function" || symbolType == "method" {
-			bonus += 0.02
-		}
-		for _, term := range terms {
-			switch {
-			case symbolName != "" && strings.Contains(symbolName, term):
-				bonus += 0.12
-			case strings.Contains(filePath, term):
-				bonus += 0.08
-			case strings.Contains(content, term):
-				bonus += 0.03
-			}
-			if bonus >= 0.60 {
-				bonus = 0.60
-				break
-			}
-		}
-		rows[i].Score += bonus
-	}
-
-	sort.SliceStable(rows, func(i, j int) bool {
-		return rows[i].Score > rows[j].Score
-	})
 }
 
 func analyzeSearchFeatures(query string, hints []string) searchFeatures {
