@@ -100,7 +100,10 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 		if len(records) == 0 {
 			return nil
 		}
-		return tx.Create(&records).Error
+		if err := tx.Create(&records).Error; err != nil {
+			return err
+		}
+		return updateChunkSearchVectors(tx, repo.ID)
 	}); err != nil {
 		return IndexStats{}, err
 	}
@@ -109,6 +112,10 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 		ChunkCount:      len(records),
 		IndexDurationMS: time.Since(started).Milliseconds(),
 	}, nil
+}
+
+func updateChunkSearchVectors(tx *gorm.DB, repositoryID uint) error {
+	return tx.Exec("UPDATE code_chunks SET search_vector = "+model.CodeChunkSearchVectorExpression+" WHERE repository_id = ?", repositoryID).Error
 }
 
 func chunkEmbeddingText(path string, chunk Chunk) string {
