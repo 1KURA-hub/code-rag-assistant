@@ -28,6 +28,15 @@ func main() {
 	if err := db.AutoMigrate(&model.Repository{}, &model.CodeChunk{}); err != nil {
 		log.Fatalf("auto migrate: %v", err)
 	}
+	if err := db.Exec("ALTER TABLE code_chunks ADD COLUMN IF NOT EXISTS search_vector tsvector").Error; err != nil {
+		log.Fatalf("add search vector column: %v", err)
+	}
+	if err := db.Exec("UPDATE code_chunks SET search_vector = " + model.CodeChunkSearchVectorExpression + " WHERE search_vector IS NULL").Error; err != nil {
+		log.Printf("backfill search vector: %v", err)
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_search_vector ON code_chunks USING GIN (search_vector)").Error; err != nil {
+		log.Printf("create search vector index: %v", err)
+	}
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_code_chunks_embedding_vector ON code_chunks USING hnsw (embedding_vector vector_cosine_ops)").Error; err != nil {
 		log.Printf("create vector index: %v", err)
 	}
