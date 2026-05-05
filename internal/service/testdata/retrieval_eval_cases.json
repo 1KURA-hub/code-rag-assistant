@@ -1,0 +1,152 @@
+[
+  {
+    "name": "ask_chain",
+    "question": "answer 链路是怎么根据用户问题生成回答的？",
+    "relevant": [
+      {"file_path": "internal/service/answer.go", "symbol_name": "Ask"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "Search"}
+    ]
+  },
+  {
+    "name": "llm_call",
+    "question": "callLLM 函数是怎么调用大模型接口的？",
+    "relevant": [
+      {"file_path": "internal/service/llm.go", "symbol_name": "callLLM"}
+    ]
+  },
+  {
+    "name": "repo_index_task",
+    "question": "CreateAndIndex 是怎么创建仓库索引任务的？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "CreateAndIndex"}
+    ]
+  },
+  {
+    "name": "background_index",
+    "question": "仓库后台 index 函数下载和索引代码的流程是什么？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "index"},
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"}
+    ]
+  },
+  {
+    "name": "go_ast_chunking",
+    "question": "Go 文件是怎么通过 AST 进行分片的？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "ChunkSourceFile"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "chunkGoFile"}
+    ]
+  },
+  {
+    "name": "line_mapping",
+    "question": "goNodeChunk 是怎么得到代码分片起止行号的？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "goNodeChunk"}
+    ]
+  },
+  {
+    "name": "embedding_batch",
+    "question": "索引阶段是怎么批量调用 embedding 模型的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "EmbedBatch"}
+    ]
+  },
+  {
+    "name": "vector_literal",
+    "question": "VectorLiteral 是怎么把向量转换成 pgvector 查询参数的？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "VectorLiteral"}
+    ]
+  },
+  {
+    "name": "vector_search",
+    "question": "pgvector 向量检索是怎么按余弦距离召回代码片段的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "vectorSearch"}
+    ]
+  },
+  {
+    "name": "keyword_full_text",
+    "question": "关键词检索是怎么使用 PostgreSQL 全文检索召回代码内容的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "keywordSearch"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "buildKeywordSearchQuery"}
+    ]
+  },
+  {
+    "name": "rrf_fusion",
+    "question": "RRF 是怎么融合向量检索和关键词检索结果的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "fuseCitationsRRF"}
+    ]
+  },
+  {
+    "name": "query_feature_extract",
+    "question": "analyzeSearchFeatures 是怎么提取路径函数名和语言关键词的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "analyzeSearchFeatures"}
+    ]
+  },
+  {
+    "name": "query_alias",
+    "question": "query alias 是怎么把中文问题扩展成英文检索词的？",
+    "relevant": [
+      {"file_path": "internal/service/query_alias.go", "symbol_name": "expandQueryText"},
+      {"file_path": "internal/service/query_alias.go", "symbol_name": "matchedAliases"}
+    ]
+  },
+  {
+    "name": "diff_hints",
+    "question": "diff 文本是怎么提取变更路径和标识符 hints 的？",
+    "relevant": [
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffHints"},
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffPaths"}
+    ]
+  },
+  {
+    "name": "impact_chain",
+    "question": "diff 影响分析链路是怎么生成风险点和测试建议的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "Analyze"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "localImpact"}
+    ]
+  },
+  {
+    "name": "repo_cache",
+    "question": "仓库状态 Redis 缓存是怎么读取和失效的？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "GetRepository"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "deleteRepoCache"}
+    ]
+  },
+  {
+    "name": "github_parse",
+    "question": "GitHub 仓库 URL 是怎么解析 owner 和 repo name 的？",
+    "relevant": [
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "Parse"}
+    ]
+  },
+  {
+    "name": "github_download",
+    "question": "GitHub 仓库 zip 文件是怎么下载的？",
+    "relevant": [
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "DownloadZip"}
+    ]
+  },
+  {
+    "name": "config_load",
+    "question": "配置和环境变量是怎么加载默认值的？",
+    "relevant": [
+      {"file_path": "internal/config/config.go", "symbol_name": "Load"}
+    ]
+  },
+  {
+    "name": "postgres_init",
+    "question": "服务启动时 PostgreSQL 和 pgvector 是怎么初始化的？",
+    "relevant": [
+      {"file_path": "cmd/server/main.go", "symbol_name": "main"},
+      {"file_path": "internal/repository/postgres.go", "symbol_name": "OpenPostgres"}
+    ]
+  }
+]
