@@ -77,13 +77,13 @@ Go 文件使用 `go/parser` 和 `go/ast` 解析源码结构，优先按函数、
 
 ### 离线检索评估
 
-项目提供了一个小规模离线评估命令，用于验证检索链路改动前后的效果。评估集位于 `internal/service/testdata/retrieval_eval_cases.json`，每条用例包含用户问题和期望命中的文件路径或符号名。
+项目提供了一个小规模离线评估命令，用于验证检索链路改动前后的效果。评估集位于 `internal/service/testdata/retrieval_eval_cases.json`，每条用例包含用户问题、问题类型和期望命中的文件路径或符号名。
 
 ```bash
 go run ./cmd/retrieval-eval --repo-id=1
 ```
 
-命令会调用真实的 `Retriever.Search`，输出 `HitRate@1`、`HitRate@3`、`HitRate@5`、`Recall@5` 和 `MRR`。这组数据主要用于本地回归对比，例如验证关键词召回、全文检索或 RRF 调整是否让目标代码片段更靠前，不等同于大规模线上准确率评测。
+命令会调用真实的 `Retriever.Search`，输出 `HitRate@1`、`HitRate@3`、`HitRate@5`、`Recall@5` 和 `MRR`，并按 `chat`、`repo`、`chunking`、`retrieval`、`impact` 等类型输出分类指标。当前评估集覆盖 51 条代码理解问题，主要用于本地回归对比，例如验证关键词召回、全文检索或 RRF 调整是否让目标代码片段更靠前，不等同于大规模线上准确率评测。
 
 ### 异步索引和状态流转
 
