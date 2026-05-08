@@ -29,8 +29,8 @@ func NewEmbedder(cfg config.Config) *Embedder {
 	return &Embedder{cfg: cfg, dim: cfg.EmbeddingDim, client: http.DefaultClient}
 }
 
-func (e *Embedder) Embed(ctx context.Context, text string) ([]float64, error) {
-	vectors, err := e.EmbedBatch(ctx, []string{text})
+func (e *Embedder) Embed(ctx context.Context, embeddingText string) ([]float64, error) {
+	vectors, err := e.EmbedBatch(ctx, []string{embeddingText})
 	if err != nil {
 		return nil, err
 	}
@@ -40,19 +40,19 @@ func (e *Embedder) Embed(ctx context.Context, text string) ([]float64, error) {
 	return vectors[0], nil
 }
 
-func (e *Embedder) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) {
-	if len(texts) == 0 {
+func (e *Embedder) EmbedBatch(ctx context.Context, embeddingTexts []string) ([][]float64, error) {
+	if len(embeddingTexts) == 0 {
 		return nil, nil
 	}
 	if e.cfg.EmbeddingProvider == "remote" {
 		if e.cfg.OpenAIAPIKey == "" {
 			return nil, errors.New("OPENAI_API_KEY is not configured")
 		}
-		return e.embedRemoteBatch(ctx, texts)
+		return e.embedRemoteBatch(ctx, embeddingTexts)
 	}
-	vectors := make([][]float64, len(texts))
-	for idx, text := range texts {
-		vectors[idx] = e.embedLocal(text)
+	vectors := make([][]float64, len(embeddingTexts))
+	for idx, embeddingText := range embeddingTexts {
+		vectors[idx] = e.embedLocal(embeddingText)
 	}
 	return vectors, nil
 }
@@ -81,22 +81,24 @@ func (e *Embedder) embedLocal(text string) []float64 {
 }
 
 type embeddingRequest struct {
-	Model      string `json:"model"`
-	Input      any    `json:"input"`
-	Dimensions int    `json:"dimensions,omitempty"`
+	Model      string   `json:"model"`
+	Input      []string `json:"input"`
+	Dimensions int      `json:"dimensions,omitempty"`
 }
 
 type embeddingResponse struct {
-	Data []struct {
-		Index     int       `json:"index"`
-		Embedding []float64 `json:"embedding"`
-	} `json:"data"`
+	Data []embeddingResponseItem `json:"data"`
 }
 
-func (e *Embedder) embedRemoteBatch(ctx context.Context, texts []string) ([][]float64, error) {
+type embeddingResponseItem struct {
+	Index     int       `json:"index"`
+	Embedding []float64 `json:"embedding"`
+}
+
+func (e *Embedder) embedRemoteBatch(ctx context.Context, embeddingTexts []string) ([][]float64, error) {
 	body, err := json.Marshal(embeddingRequest{
 		Model:      e.cfg.EmbeddingModel,
-		Input:      texts,
+		Input:      embeddingTexts,
 		Dimensions: e.dim,
 	})
 	if err != nil {
@@ -126,33 +128,35 @@ func (e *Embedder) embedRemoteBatch(ctx context.Context, texts []string) ([][]fl
 	if len(decoded.Data) == 0 {
 		return nil, errors.New("embedding response is empty")
 	}
-	if len(decoded.Data) != len(texts) {
-		return nil, fmt.Errorf("embedding response count mismatch: got %d want %d", len(decoded.Data), len(texts))
+	return alignEmbeddingVectors(len(embeddingTexts), decoded.Data, e.dim)
+}
+
+func alignEmbeddingVectors(inputCount int, responseItems []embeddingResponseItem, dim int) ([][]float64, error) {
+	if len(responseItems) != inputCount {
+		return nil, fmt.Errorf("embedding response count mismatch: got %d want %d", len(responseItems), inputCount)
 	}
-	useResponseOrder := false
-	seen := make([]bool, len(texts))
-	for _, item := range decoded.Data {
-		if item.Index < 0 || item.Index >= len(texts) || seen[item.Index] {
-			useResponseOrder = true
-			break
+	vectorsByInputIndex := make([][]float64, inputCount)
+	seenInputIndex := make([]bool, inputCount)
+	for responsePosition, responseItem := range responseItems {
+		inputIndex := responseItem.Index
+		if inputIndex < 0 || inputIndex >= inputCount {
+			return nil, fmt.Errorf("embedding response index out of range at response item %d: got %d want 0-%d",
+				responsePosition, inputIndex, inputCount-1)
 		}
-		seen[item.Index] = true
+		if seenInputIndex[inputIndex] {
+			return nil, fmt.Errorf("embedding response index %d is duplicated", inputIndex)
+		}
+		if len(responseItem.Embedding) == 0 {
+			return nil, fmt.Errorf("embedding response item %d is empty", inputIndex)
+		}
+		if len(responseItem.Embedding) != dim {
+			return nil, fmt.Errorf("embedding dimension mismatch at input %d: got %d want %d",
+				inputIndex, len(responseItem.Embedding), dim)
+		}
+		seenInputIndex[inputIndex] = true
+		vectorsByInputIndex[inputIndex] = normalizeVector(responseItem.Embedding)
 	}
-	vectors := make([][]float64, len(texts))
-	for pos, item := range decoded.Data {
-		target := item.Index
-		if useResponseOrder {
-			target = pos
-		}
-		if len(item.Embedding) == 0 {
-			return nil, fmt.Errorf("embedding response item %d is empty", target)
-		}
-		if len(item.Embedding) != e.dim {
-			return nil, fmt.Errorf("embedding dimension mismatch at item %d: got %d want %d", target, len(item.Embedding), e.dim)
-		}
-		vectors[target] = normalizeVector(item.Embedding)
-	}
-	return vectors, nil
+	return vectorsByInputIndex, nil
 }
 
 func normalizeVector(vector []float64) []float64 {

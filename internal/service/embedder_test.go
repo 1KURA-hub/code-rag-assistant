@@ -50,8 +50,7 @@ func TestRemoteEmbedBatchUsesResponseIndex(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return nil, err
 		}
-		inputs, ok := req.Input.([]any)
-		if !ok || len(inputs) != 2 {
+		if len(req.Input) != 2 {
 			t.Fatalf("request input = %#v, want two-item array", req.Input)
 		}
 		return &http.Response{
