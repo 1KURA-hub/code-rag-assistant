@@ -26,7 +26,7 @@ type IndexStats struct {
 	IndexDurationMS int64
 }
 
-type chunkRecordInput struct {
+type chunkEmbeddingItem struct {
 	filePath   string
 	chunk      Chunk
 	chunkIndex int
@@ -42,53 +42,53 @@ func (i *CodeIndexer) IndexRepository(ctx context.Context, repo *model.Repositor
 	if err != nil {
 		return IndexStats{}, err
 	}
-	inputs := make([]chunkRecordInput, 0, len(files)*2)
+	chunkItems := make([]chunkEmbeddingItem, 0, len(files)*2)
 	for _, file := range files {
 		chunks := ChunkSourceFile(file, i.cfg.ChunkMaxLines, i.cfg.ChunkOverlapLines)
 		for idx, chunk := range chunks {
-			inputs = append(inputs, chunkRecordInput{filePath: file.Path, chunk: chunk, chunkIndex: idx})
+			chunkItems = append(chunkItems, chunkEmbeddingItem{filePath: file.Path, chunk: chunk, chunkIndex: idx})
 		}
 	}
 
-	records := make([]*model.CodeChunk, 0, len(inputs))
+	records := make([]*model.CodeChunk, 0, len(chunkItems))
 	batchSize := i.cfg.EmbeddingBatchSize
 	if batchSize <= 0 {
 		batchSize = 1
 	}
-	for start := 0; start < len(inputs); start += batchSize {
+	for start := 0; start < len(chunkItems); start += batchSize {
 		end := start + batchSize
-		if end > len(inputs) {
-			end = len(inputs)
+		if end > len(chunkItems) {
+			end = len(chunkItems)
 		}
-		batch := inputs[start:end]
-		texts := make([]string, len(batch))
-		for idx, input := range batch {
-			texts[idx] = chunkEmbeddingText(input.filePath, input.chunk)
+		chunkBatch := chunkItems[start:end]
+		embeddingTexts := make([]string, len(chunkBatch))
+		for idx, chunkItem := range chunkBatch {
+			embeddingTexts[idx] = chunkEmbeddingText(chunkItem.filePath, chunkItem.chunk)
 		}
-		vectors, err := i.embedder.EmbedBatch(ctx, texts)
+		embeddingVectors, err := i.embedder.EmbedBatch(ctx, embeddingTexts)
 		if err != nil {
-			first := batch[0]
-			last := batch[len(batch)-1]
+			first := chunkBatch[0]
+			last := chunkBatch[len(chunkBatch)-1]
 			return IndexStats{}, fmt.Errorf("embed batch %s:%d-%d to %s:%d-%d: %w",
 				first.filePath, first.chunk.StartLine, first.chunk.EndLine,
 				last.filePath, last.chunk.StartLine, last.chunk.EndLine, err)
 		}
-		if len(vectors) != len(batch) {
-			return IndexStats{}, fmt.Errorf("embed batch count mismatch: got %d want %d", len(vectors), len(batch))
+		if len(embeddingVectors) != len(chunkBatch) {
+			return IndexStats{}, fmt.Errorf("embed batch count mismatch: got %d want %d", len(embeddingVectors), len(chunkBatch))
 		}
-		for idx, input := range batch {
-			chunk := input.chunk
+		for idx, chunkItem := range chunkBatch {
+			chunk := chunkItem.chunk
 			record := &model.CodeChunk{
 				RepositoryID:    repo.ID,
-				FilePath:        input.filePath,
+				FilePath:        chunkItem.filePath,
 				StartLine:       chunk.StartLine,
 				EndLine:         chunk.EndLine,
-				ChunkIndex:      input.chunkIndex,
-				Language:        chunkLanguage(input.filePath, chunk),
+				ChunkIndex:      chunkItem.chunkIndex,
+				Language:        chunkLanguage(chunkItem.filePath, chunk),
 				SymbolName:      chunk.SymbolName,
 				SymbolType:      chunk.SymbolType,
 				Content:         chunk.Content,
-				EmbeddingVector: VectorLiteral(vectors[idx]),
+				EmbeddingVector: VectorLiteral(embeddingVectors[idx]),
 			}
 			records = append(records, record)
 		}
