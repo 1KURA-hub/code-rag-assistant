@@ -48,6 +48,16 @@ func TestAnalyzeSearchFeaturesTreatsLanguageWordsAsLanguages(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSearchFeaturesDetectsSymbolTypes(t *testing.T) {
+	features := analyzeSearchFeatures("这个项目有哪些函数、结构体、常量和全局变量", nil)
+
+	for _, want := range []string{"function", "method", "type", "const", "var"} {
+		if !containsString(features.SymbolTypes, want) {
+			t.Fatalf("features.SymbolTypes = %v, want %q", features.SymbolTypes, want)
+		}
+	}
+}
+
 func TestAnalyzeSearchFeaturesKeepsTechWordsAsTerms(t *testing.T) {
 	features := analyzeSearchFeatures("redis stream 和 rabbitmq 的 jwt 逻辑", nil)
 
@@ -92,6 +102,18 @@ func TestBuildKeywordSearchQueryUsesFullTextForContentTerms(t *testing.T) {
 	}
 	if len(args) == 0 {
 		t.Fatal("keyword query args are empty")
+	}
+}
+
+func TestBuildKeywordSearchQueryUsesSymbolType(t *testing.T) {
+	features := analyzeSearchFeatures("有哪些函数", nil)
+	query, args := buildKeywordSearchQuery(7, features, 10)
+
+	if !strings.Contains(query, "lower(symbol_type) = ?") {
+		t.Fatalf("keyword query = %s, want symbol_type condition", query)
+	}
+	if !containsAny(args, "function") || !containsAny(args, "method") {
+		t.Fatalf("keyword query args = %v, want function and method", args)
 	}
 }
 
@@ -175,6 +197,15 @@ func TestRetrievalEvalSet(t *testing.T) {
 			}
 		})
 	}
+}
+
+func containsAny(values []any, target string) bool {
+	for _, value := range values {
+		if text, ok := value.(string); ok && text == target {
+			return true
+		}
+	}
+	return false
 }
 
 type retrievalEvalCase struct {
