@@ -26,10 +26,11 @@ type Citation struct {
 }
 
 type searchFeatures struct {
-	Terms     []string
-	Paths     []string
-	Symbols   []string
-	Languages []string
+	Terms       []string
+	Paths       []string
+	Symbols     []string
+	SymbolTypes []string
+	Languages   []string
 }
 
 const rrfK = 60.0
@@ -102,7 +103,7 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 
 func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit int) (string, []any) {
 	terms := keywordContentTerms(features)
-	if (len(features.Paths) == 0 && len(features.Symbols) == 0 && len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
+	if (len(features.Paths) == 0 && len(features.Symbols) == 0 && len(features.SymbolTypes) == 0 && len(terms) == 0 && len(features.Languages) == 0) || limit <= 0 {
 		return "", nil
 	}
 
@@ -126,6 +127,10 @@ func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit i
 	}
 	for _, symbol := range features.Symbols {
 		addLike("symbol_name", symbol)
+	}
+	for _, symbolType := range features.SymbolTypes {
+		clauses = append(clauses, "lower(symbol_type) = ?")
+		whereArgs = append(whereArgs, strings.ToLower(symbolType))
 	}
 	for _, term := range terms {
 		addLike("file_path", term)
@@ -162,6 +167,7 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	seenTerms := map[string]struct{}{}
 	seenPaths := map[string]struct{}{}
 	seenSymbols := map[string]struct{}{}
+	seenSymbolTypes := map[string]struct{}{}
 	seenLanguages := map[string]struct{}{}
 
 	addTerm := func(term string) {
@@ -188,6 +194,13 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 		seenSymbols[symbol] = struct{}{}
 		features.Symbols = append(features.Symbols, symbol)
 	}
+	addSymbolType := func(symbolType string) {
+		if _, ok := seenSymbolTypes[symbolType]; symbolType == "" || ok {
+			return
+		}
+		seenSymbolTypes[symbolType] = struct{}{}
+		features.SymbolTypes = append(features.SymbolTypes, symbolType)
+	}
 	addLanguage := func(language string) {
 		if _, ok := seenLanguages[language]; language == "" || ok {
 			return
@@ -209,6 +222,9 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	for _, alias := range matchedAliases(text) {
 		addTerm(alias)
 	}
+	for _, symbolType := range detectSymbolTypes(text) {
+		addSymbolType(symbolType)
+	}
 
 	lowerText := strings.ToLower(text)
 	if strings.Contains(lowerText, "golang") || strings.Contains(lowerText, "go 文件") || strings.Contains(lowerText, "go文件") {
@@ -228,6 +244,45 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 	}
 
 	return features
+}
+
+func detectSymbolTypes(text string) []string {
+	lowerText := strings.ToLower(text)
+	types := make([]string, 0, 4)
+	add := func(symbolType string) {
+		for _, existing := range types {
+			if existing == symbolType {
+				return
+			}
+		}
+		types = append(types, symbolType)
+	}
+	if strings.Contains(lowerText, "func") ||
+		strings.Contains(text, "函数") ||
+		strings.Contains(text, "方法") ||
+		strings.Contains(text, "接口入口") ||
+		strings.Contains(text, "调用链") {
+		add("function")
+		add("method")
+	}
+	if strings.Contains(lowerText, "struct") ||
+		strings.Contains(lowerText, "interface") ||
+		strings.Contains(text, "结构体") ||
+		strings.Contains(text, "类型") ||
+		strings.Contains(text, "模型") {
+		add("type")
+	}
+	if strings.Contains(lowerText, "const") ||
+		strings.Contains(text, "常量") ||
+		strings.Contains(text, "状态码") {
+		add("const")
+	}
+	if strings.Contains(lowerText, "var") ||
+		strings.Contains(text, "变量") ||
+		strings.Contains(text, "全局变量") {
+		add("var")
+	}
+	return types
 }
 
 func keywordSearchTerms(features searchFeatures) []string {
