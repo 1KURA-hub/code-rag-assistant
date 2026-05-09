@@ -2207,7 +2207,7 @@ button {
 
 .repo-menu-anchor {
   width: max-content;
-  max-width: min(680px, calc(100vw - 520px));
+  max-width: min(680px, calc(100vw - 200px));
   min-width: 0;
   grid-column: 1;
   justify-self: start;
@@ -2235,7 +2235,7 @@ button {
 .repo-chip span {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: min(590px, calc(100vw - 610px));
+  max-width: min(590px, calc(100vw - 210px));
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 650;
@@ -2346,4 +2346,253 @@ button {
   background: transparent;
   border: 0;
   box-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .chat-header {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    min-height: 50px;
+    padding: 8px 12px;
+  }
+
+  .header-title {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .evidence-toggle {
+    display: none;
+  }
+
+  .repo-chip {
+    max-width: 220px;
+    min-height: 34px;
+    padding: 5px 7px 5px 10px;
+    gap: 6px;
+  }
+
+  .repo-chip span {
+    font-size: 11px;
+  }
+
+  .repo-chip .asset-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .mini-status {
+    font-size: 10px;
+    min-height: 18px;
+    padding: 0 6px;
+  }
+
+  .repo-popover {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    top: 60px;
+    width: auto;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .rail {
+    height: 56px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .rail-brand {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .rail-nav {
+    gap: 4px;
+  }
+
+  .rail-nav button {
+    min-height: 42px;
+    border-radius: 12px;
+    gap: 2px;
+  }
+
+  .rail-nav button span {
+    font-size: 10px;
+  }
+
+  .rail-nav .pixel-icon {
+    font-size: 1em;
+  }
+
+  .rail-theme {
+    display: none;
+  }
+
+  .header-theme {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+  }
+
+  .chat-shell {
+    height: calc(100vh - 56px);
+  }
+
+  .message-frame {
+    width: calc(100% - 20px);
+    padding: 16px 0 20px;
+  }
+
+  .message-frame.empty-frame {
+    padding: 12vh 0 0;
+  }
+
+  .message {
+    max-width: 90%;
+  }
+
+  .message-row {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .user-message {
+    padding: 10px 12px;
+    border-radius: 16px 16px 4px 16px;
+  }
+
+  .composer-wrap {
+    padding: 8px 10px 14px;
+  }
+
+  .composer {
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 18px;
+  }
+
+  .composer textarea {
+    min-height: 38px;
+    max-height: 140px;
+    padding: 9px 6px;
+    font-size: 16px;
+  }
+
+  .composer-tools {
+    align-self: end;
+  }
+
+  .prompt-tray-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .composer > button[type="submit"] {
+    width: 38px;
+    height: 38px;
+  }
+
+  .message,
+  .repo-popover,
+  .about-dialog,
+  .help-dialog,
+  .evidence-drawer {
+    font-size: 15px;
+  }
+
+  .chat-header h2,
+  .evidence-header h2,
+  .repo-popover h1,
+  .about-dialog h2,
+  .help-dialog h2 {
+    font-size: 17px;
+  }
+
+  .rail-nav button span,
+  .mini-status,
+  .status-pill,
+  .eyebrow,
+  .field-label,
+  .metric span,
+  .step,
+  .message-label,
+  .text-button,
+  .primary-action,
+  .ghost-action {
+    font-size: 13px;
+  }
+
+  .welcome h2 {
+    font-size: clamp(26px, 7vw, 36px);
+  }
+
+  .hero-mark {
+    width: 48px;
+    height: 42px;
+  }
+
+  .hero-line {
+    gap: 10px;
+  }
+
+  .welcome {
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .home-composer-wrap {
+    margin-top: 8px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .metric {
+    padding: 10px;
+  }
+
+  .metric strong {
+    font-size: 15px;
+  }
+
+  .stepper {
+    padding: 10px;
+    gap: 4px;
+  }
+
+  .step {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .side-actions {
+    gap: 6px;
+  }
+
+  .primary-action,
+  .ghost-action {
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .repo-control,
+  .repo-status-block {
+    padding: 10px;
+  }
 }
