@@ -1,33 +1,36 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  AlertCircle,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  Code2,
-  FileCode2,
-  GitBranch,
-  Loader2,
-  Maximize2,
-  Minimize2,
-  Moon,
-  PanelRightOpen,
-  Plus,
-  RefreshCcw,
-  SearchCode,
-  SendHorizontal,
-  Sparkles,
-  Sun,
-  UserRound,
-  X
-} from "lucide-react";
+import { CircleHelp, Expand, GitBranch, Moon, PanelRightOpen, Shrink, Sun } from "lucide-react";
 import "./styles.css";
+import appIcon from "./assets/app-icon.png";
+import promptChatIcon from "./assets/prompt-chat.png";
+import repoZipIcon from "./assets/repo-zip.png";
+import sendArrowIcon from "./assets/send-arrow.png";
 
 const starterPrompts = [
   "这个项目的核心流程是什么？",
   "主要接口有哪些？",
   "diff --git a/internal/service/answer.go b/internal/service/answer.go\n@@ -1,3 +1,3 @@\n- 返回英文回答\n+ 返回中文回答"
+];
+
+const timeGreetings = {
+  morning: ["Morning", "Good morning"],
+  afternoon: ["Afternoon", "Good afternoon"],
+  evening: ["Evening", "Good evening"]
+};
+
+const neutralGreetings = [
+  "Hello",
+  "Welcome",
+  "Ready",
+  "Ask away",
+  "Start here",
+  "Code time",
+  "Need context",
+  "Let's inspect",
+  "Ship it",
+  "Trace logic",
+  "Find impact"
 ];
 
 const indexSteps = [
@@ -44,7 +47,6 @@ const statusText = {
   failed: "索引失败"
 };
 
-const defaultQuestion = "这个项目的消息消费主流程是什么？";
 const repoIDStorageKey = "code-rag-assistant.repo-id";
 const defaultRepoID = "1";
 
@@ -68,10 +70,82 @@ function useEscape(handler, enabled = true) {
   }, [handler, enabled]);
 }
 
+function pickGreeting() {
+  const hour = new Date().getHours();
+  const bucket = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const candidates = [...timeGreetings[bucket], ...neutralGreetings];
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function AppMark({ size = 34 }) {
+  return (
+    <img
+      src={appIcon}
+      alt=""
+      width={size}
+      height={size}
+      className="app-mark"
+      aria-hidden="true"
+      draggable="false"
+    />
+  );
+}
+
+function AssetIcon({ src, size = 22, className = "" }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className={`asset-icon ${className}`}
+      style={{ "--asset-size": `${size}px` }}
+      aria-hidden="true"
+      draggable="false"
+    />
+  );
+}
+
+function PixelIcon({ name, label }) {
+  const glyphs = {
+    add: "+",
+    repo: "",
+    evidence: "</>",
+    help: "?",
+    moon: "☾",
+    sun: "☀",
+    search: "⌕",
+    refresh: "↻",
+    close: "×",
+    file: "</>",
+    user: "YOU",
+    ready: "✓",
+    failed: "!",
+    loading: "...",
+    clock: "○",
+    normal: "⇐",
+    full: "▣",
+    exit: "□",
+    prompt: "!",
+    send: ">"
+  };
+  if (name === "repo") {
+    return (
+      <span className="pixel-icon pixel-icon-repo" aria-hidden="true">
+        <span className="pixel-folder">
+          <i />
+          <b />
+        </span>
+      </span>
+    );
+  }
+  return <span className={`pixel-icon pixel-icon-${name}`} aria-hidden="true">{label || glyphs[name] || "[]"}</span>;
+}
+
 function App() {
   const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
   const [repo, setRepo] = useState(null);
-  const [input, setInput] = useState(defaultQuestion);
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [activeCitations, setActiveCitations] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -79,8 +153,11 @@ function App() {
   const [theme, setTheme] = useState("light");
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [evidenceSize, setEvidenceSize] = useState("normal");
+  const [promptMenuOpen, setPromptMenuOpen] = useState(false);
+  const [greeting] = useState(pickGreeting);
   const [pendingIntent, setPendingIntent] = useState("ask");
   const [lastIntent, setLastIntent] = useState("ask");
   const messageEndRef = useRef(null);
@@ -276,7 +353,7 @@ function App() {
     setMessages([]);
     setActiveCitations([]);
     setEvidenceOpen(false);
-    setInput(defaultQuestion);
+    setInput("");
   }
 
   const repoMeta = useMemo(() => {
@@ -292,12 +369,12 @@ function App() {
     <div className="app" data-theme={theme}>
       <aside className="rail">
         <button className="rail-brand" onClick={() => setAboutOpen(true)} title="项目介绍">
-          <Sparkles size={22} />
+          <AppMark size={34} />
         </button>
 
         <nav className="rail-nav" aria-label="主要功能">
           <button onClick={newChat} title="新对话">
-            <Plus size={21} />
+            <PixelIcon name="add" />
             <span>新建</span>
           </button>
           <button className={repoPopoverOpen ? "active" : ""} onClick={() => setRepoPopoverOpen((open) => !open)} title="仓库">
@@ -307,6 +384,10 @@ function App() {
           <button className={evidenceOpen ? "active" : ""} onClick={() => setEvidenceOpen(!evidenceOpen)} title="代码依据">
             <PanelRightOpen size={21} />
             <span>依据</span>
+          </button>
+          <button className={helpOpen ? "active" : ""} onClick={() => setHelpOpen(true)} title="使用说明">
+            <CircleHelp size={21} />
+            <span>说明</span>
           </button>
         </nav>
 
@@ -318,9 +399,9 @@ function App() {
       <main className="chat-shell">
         <header className="chat-header">
           <div className="repo-menu-anchor" ref={repoMenuRef}>
-            <button className="repo-chip" onClick={() => setRepoPopoverOpen((open) => !open)}>
-              <GitBranch size={16} />
-              <span>{repoName(repoURL)}</span>
+            <button className="repo-chip" onClick={() => setRepoPopoverOpen((open) => !open)} title={repoURL}>
+              <AssetIcon src={repoZipIcon} size={19} />
+              <span>{repoURL}</span>
               <em className={`mini-status status-${currentStatus}`}>{renderStatus(currentStatus)}</em>
             </button>
             {repoPopoverOpen && (
@@ -356,12 +437,21 @@ function App() {
         </header>
 
         <section className="message-list">
-          <div className="message-frame">
+          <div className={`message-frame ${messages.length === 0 ? "empty-frame" : ""}`}>
             {messages.length === 0 ? (
               <WelcomeState
-                canAsk={canAsk}
-                onOpenRepo={() => setRepoPopoverOpen(true)}
-                onPick={(question) => setInput(question)}
+                input={input}
+                greeting={greeting}
+                busy={busy}
+                promptMenuOpen={promptMenuOpen}
+                onTogglePrompts={() => setPromptMenuOpen((open) => !open)}
+                onClosePrompts={() => setPromptMenuOpen(false)}
+                onPick={(question) => {
+                  setInput(question);
+                  setPromptMenuOpen(false);
+                }}
+                onInputChange={setInput}
+                onSubmit={submitMessage}
               />
             ) : (
               messages.map((message) => (
@@ -374,7 +464,7 @@ function App() {
             )}
             {busy && (
               <div className="message-row assistant-row">
-                <div className="avatar assistant-avatar"><Bot size={17} /></div>
+                <div className="avatar assistant-avatar"><AppMark size={24} /></div>
                 <div className="message assistant-message loading-message">
                   <span className="dots"><i /><i /><i /></span>
                   {pendingIntent === "impact" ? "正在解析 diff 并分析影响" : "正在检索代码并生成回答"}
@@ -385,36 +475,23 @@ function App() {
           </div>
         </section>
 
+        {messages.length > 0 && (
         <footer className="composer-wrap">
-          {!canAsk && (
-            <button className="composer-hint" onClick={() => setRepoPopoverOpen(true)}>
-              <GitBranch size={15} />
-              请先完成仓库索引
-            </button>
-          )}
-          <form
-            className="composer"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submitMessage();
+          <Composer
+            input={input}
+            busy={busy}
+            promptMenuOpen={promptMenuOpen}
+            onInputChange={setInput}
+            onSubmit={submitMessage}
+            onTogglePrompts={() => setPromptMenuOpen((open) => !open)}
+            onClosePrompts={() => setPromptMenuOpen(false)}
+            onPickPrompt={(question) => {
+              setInput(question);
+              setPromptMenuOpen(false);
             }}
-          >
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="询问代码逻辑，或粘贴 git diff 分析影响..."
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submitMessage();
-                }
-              }}
-            />
-            <button type="submit" disabled={busy || !input.trim()}>
-              <SendHorizontal size={18} />
-            </button>
-          </form>
+          />
         </footer>
+        )}
       </main>
 
       <EvidenceDrawer
@@ -427,6 +504,7 @@ function App() {
       />
 
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }
@@ -439,14 +517,14 @@ function AboutDialog({ onClose }) {
       <button className="about-scrim" onClick={onClose} aria-label="关闭项目介绍" />
       <section className="about-dialog">
         <header>
-          <div className="about-mark"><Sparkles size={24} /></div>
+          <div className="about-mark"><AppMark size={38} /></div>
           <div>
             <span className="eyebrow">Code RAG Assistant</span>
             <h2>代码仓库 RAG 助手</h2>
             <p>导入 GitHub 仓库后，系统会扫描代码、切分代码片段、生成 embedding 并写入 PostgreSQL + pgvector。</p>
           </div>
           <button className="icon-button" onClick={onClose} title="关闭">
-            <X size={18} />
+            <PixelIcon name="close" />
           </button>
         </header>
         <div className="about-grid">
@@ -490,7 +568,7 @@ function RepoPopover({
           <p>导入 GitHub 仓库后，系统会分片、向量化并写入 pgvector。</p>
         </div>
         <button className="icon-button" onClick={onClose} title="关闭仓库面板">
-          <X size={18} />
+          <PixelIcon name="close" />
         </button>
       </div>
 
@@ -504,11 +582,11 @@ function RepoPopover({
         />
         <div className="side-actions">
           <button className="primary-action" onClick={onIndex} disabled={busy || isIndexing}>
-            {isIndexing ? <Loader2 className="spin" size={16} /> : <SearchCode size={16} />}
+            <PixelIcon name={isIndexing ? "loading" : "search"} />
             {isIndexing ? "索引中" : repo?.id ? "重新索引" : "开始索引"}
           </button>
-          <button className="ghost-action" onClick={onRefresh} disabled={!repo?.id}>
-            <RefreshCcw size={16} />刷新
+          <button className="ghost-action refresh-action" onClick={onRefresh} disabled={!repo?.id}>
+            <PixelIcon name="refresh" />刷新
           </button>
         </div>
       </div>
@@ -540,46 +618,134 @@ function MessageBubble({ message, onShowCitations }) {
   const intentLabel = message.type === "impact" ? "影响分析" : "代码问答";
   return (
     <div className={`message-row ${isUser ? "user-row" : "assistant-row"}`}>
-      {!isUser && <div className="avatar assistant-avatar"><Bot size={17} /></div>}
+      {!isUser && <div className="avatar assistant-avatar"><AppMark size={24} /></div>}
       <div className={`message ${isUser ? "user-message" : "assistant-message"}`}>
         {!isUser && <span className="message-label">{intentLabel}</span>}
         <RichText content={message.content} />
         {!isUser && message.citations?.length > 0 && (
           <button className="citation-link" onClick={onShowCitations}>
-            <FileCode2 size={14} />
+            <PixelIcon name="file" />
             查看 {message.citations.length} 个代码依据
           </button>
         )}
       </div>
-      {isUser && <div className="avatar user-avatar"><UserRound size={17} /></div>}
+      {isUser && <div className="avatar user-avatar"><PixelIcon name="user" /></div>}
     </div>
   );
 }
 
-function WelcomeState({ onPick, onOpenRepo, canAsk }) {
+function HelpDialog({ onClose }) {
+  useEscape(onClose);
+
+  return (
+    <div className="about-layer">
+      <button className="about-scrim" onClick={onClose} aria-label="关闭使用说明" />
+      <section className="help-dialog">
+        <header>
+          <div className="about-mark"><CircleHelp size={28} /></div>
+          <div>
+            <span className="eyebrow">How to use</span>
+            <h2>使用说明</h2>
+            <p>这个页面会根据当前仓库索引回答代码问题，也可以分析 git diff 的影响范围。</p>
+          </div>
+          <button className="icon-button" onClick={onClose} title="关闭">
+            <PixelIcon name="close" />
+          </button>
+        </header>
+        <div className="help-steps">
+          <div><strong>1. 导入仓库</strong><span>点击左侧“仓库”，输入公开 GitHub 地址并开始索引。</span></div>
+          <div><strong>2. 等待就绪</strong><span>状态变成“已就绪”后，代码分片和向量已经写入 pgvector。</span></div>
+          <div><strong>3. 询问代码</strong><span>直接输入接口、函数、调用链或实现细节问题，会返回带代码依据的回答。</span></div>
+          <div><strong>4. 分析变更</strong><span>粘贴 git diff 会自动进入影响分析，并给出风险点和建议测试。</span></div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function WelcomeState({ input, greeting, busy, promptMenuOpen, onInputChange, onSubmit, onPick, onTogglePrompts, onClosePrompts }) {
   return (
     <div className="welcome">
-      <div className="welcome-icon"><Code2 size={30} /></div>
-      <h2>{canAsk ? "开始询问代码逻辑" : "先导入仓库，再开始代码问答"}</h2>
-      <p>普通问题会走代码问答；粘贴 git diff 会自动进入变更影响分析。代码依据可以从右上角打开查看。</p>
-      <div className="rag-flow">
-        <span>GitHub Repo</span>
-        <i>→</i>
-        <span>Code Chunk</span>
-        <i>→</i>
-        <span>Embedding</span>
-        <i>→</i>
-        <span>pgvector</span>
-        <i>→</i>
-        <span>Answer</span>
+      <div className="hero-line">
+        <div className="hero-mark">
+          <AppMark size={44} />
+        </div>
+        <h2>{greeting}</h2>
       </div>
-      <div className="starter-grid">
-        {!canAsk && <button className="primary-starter" onClick={onOpenRepo}>打开仓库索引</button>}
-        {starterPrompts.map((question) => (
-          <button key={question} onClick={() => onPick(question)}>{question.split("\n")[0]}</button>
-        ))}
+      <div className="home-composer-wrap">
+        <Composer
+          input={input}
+          busy={busy}
+          promptMenuOpen={promptMenuOpen}
+          onInputChange={onInputChange}
+          onSubmit={onSubmit}
+          onTogglePrompts={onTogglePrompts}
+          onClosePrompts={onClosePrompts}
+          onPickPrompt={onPick}
+        />
       </div>
     </div>
+  );
+}
+
+function Composer({ input, busy, promptMenuOpen, onInputChange, onSubmit, onTogglePrompts, onClosePrompts, onPickPrompt }) {
+  const promptMenuRef = useRef(null);
+
+  useEscape(onClosePrompts, promptMenuOpen);
+
+  useEffect(() => {
+    if (!promptMenuOpen) return undefined;
+    function handlePointerDown(event) {
+      if (!promptMenuRef.current?.contains(event.target)) {
+        onClosePrompts();
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [promptMenuOpen, onClosePrompts]);
+
+  return (
+    <form
+      className="composer"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <div className="composer-tools" ref={promptMenuRef}>
+        <button
+          type="button"
+          className={`prompt-tray-button ${promptMenuOpen ? "active" : ""}`}
+          onClick={onTogglePrompts}
+          title="准备好的问题"
+        >
+          <AssetIcon src={promptChatIcon} size={23} />
+        </button>
+        {promptMenuOpen && (
+          <div className="prompt-tray">
+            {starterPrompts.map((question) => (
+              <button type="button" key={question} onClick={() => onPickPrompt(question)}>
+                {question.split("\n")[0]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <textarea
+        value={input}
+        onChange={(e) => onInputChange(e.target.value)}
+        placeholder="询问代码逻辑，或粘贴 git diff 分析影响..."
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+      />
+      <button type="submit" disabled={busy || !input.trim()}>
+        <AssetIcon src={sendArrowIcon} size={20} className="send-icon" />
+      </button>
+    </form>
   );
 }
 
@@ -608,7 +774,7 @@ function IndexStepper({ status }) {
         const failed = state === "failed" && index === activeIndex;
         return (
           <div className={`step ${done ? "done" : ""} ${active ? "active" : ""} ${failed ? "failed" : ""}`} key={step}>
-            <span>{done ? <CheckCircle2 size={12} /> : active ? <Loader2 className="spin" size={12} /> : failed ? <AlertCircle size={12} /> : <Clock3 size={12} />}</span>
+            <span>{done ? <PixelIcon name="ready" /> : active ? <PixelIcon name="loading" /> : failed ? <PixelIcon name="failed" /> : <PixelIcon name="clock" />}</span>
             <em>{step}</em>
           </div>
         );
@@ -632,7 +798,7 @@ function EvidenceDrawer({ citations, intent, open, size, onSizeChange, onClose }
       setPreviewItem(null);
       return;
     }
-    if (fullscreen || size === "wide") {
+    if (fullscreen) {
       onSizeChange("normal");
       return;
     }
@@ -640,7 +806,7 @@ function EvidenceDrawer({ citations, intent, open, size, onSizeChange, onClose }
   }, open);
 
   function closeOneLevel() {
-    if (fullscreen || size === "wide") {
+    if (fullscreen) {
       onSizeChange("normal");
       return;
     }
@@ -658,23 +824,19 @@ function EvidenceDrawer({ citations, intent, open, size, onSizeChange, onClose }
             <p>当前回答的 {citations.length} 个片段</p>
           </div>
           <div className="evidence-actions">
-            <button className="text-button" onClick={() => onSizeChange(size === "wide" ? "normal" : "wide")} title={size === "wide" ? "恢复普通宽度" : "加宽查看"}>
-              {size === "wide" ? <Minimize2 size={16} /> : <PanelRightOpen size={16} />}
-              {size === "wide" ? "普通" : "加宽"}
-            </button>
             <button className="text-button strong" onClick={() => onSizeChange(fullscreen ? "normal" : "fullscreen")} title={fullscreen ? "退出全屏" : "全屏查看"}>
-              {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              {fullscreen ? <Shrink size={16} /> : <Expand size={16} />}
               {fullscreen ? "退出" : "全屏"}
             </button>
             <button className="icon-button" onClick={onClose} title="关闭代码依据">
-              <X size={18} />
+              <PixelIcon name="close" />
             </button>
           </div>
         </div>
         <div className="evidence-list">
           {citations.length === 0 && (
             <div className="empty-evidence">
-              <FileCode2 size={28} />
+              <PixelIcon name="file" />
               <p>暂无代码依据。完成一次问答或影响分析后，这里会展示检索命中的代码片段。</p>
             </div>
           )}
@@ -711,7 +873,7 @@ function CodePreviewModal({ item, onClose }) {
             <p>{item.file_path}:{item.start_line}-{item.end_line}</p>
           </div>
           <button className="icon-button" onClick={onClose} title="关闭预览">
-            <X size={18} />
+            <PixelIcon name="close" />
           </button>
         </header>
         <CodeBlock content={item.content} startLine={item.start_line} />
@@ -835,10 +997,10 @@ function renderStatus(status) {
 }
 
 function statusIcon(status) {
-  if (status === "ready") return <CheckCircle2 size={15} />;
-  if (status === "failed") return <AlertCircle size={15} />;
-  if (status === "pending" || status === "indexing") return <Loader2 className="spin" size={15} />;
-  return <Clock3 size={15} />;
+  if (status === "ready") return <PixelIcon name="ready" />;
+  if (status === "failed") return <PixelIcon name="failed" />;
+  if (status === "pending" || status === "indexing") return <PixelIcon name="loading" />;
+  return <PixelIcon name="clock" />;
 }
 
 function repoName(url) {
