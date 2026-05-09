@@ -2595,4 +2595,151 @@ button {
   .repo-status-block {
     padding: 10px;
   }
+
+  .evidence-drawer {
+    top: 56px;
+    right: 6px;
+    width: calc(100vw - 12px);
+    height: calc(100vh - 120px);
+    border-radius: 18px;
+  }
+
+  .evidence-drawer.evidence-fullscreen {
+    top: 6px;
+    right: 6px;
+    bottom: 64px;
+    left: 6px;
+    width: auto;
+    height: auto;
+    border-radius: 18px;
+  }
+
+  .evidence-header {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .evidence-list {
+    padding: 8px;
+  }
+
+  .evidence-item {
+    margin-bottom: 8px;
+  }
+
+  .evidence-summary {
+    padding: 10px;
+  }
+
+  .evidence-summary strong {
+    font-size: 12px;
+  }
+
+  .evidence-summary > div > span {
+    font-size: 10px;
+  }
+
+  .evidence-item em {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .evidence-actions {
+    gap: 4px;
+  }
+
+  .evidence-fullscreen .evidence-list {
+    grid-template-columns: 1fr;
+  }
+
+  .code-preview-layer {
+    padding: 6px;
+  }
+
+  .code-preview {
+    width: calc(100vw - 12px);
+    height: calc(100vh - 68px);
+    border-radius: 16px;
+  }
+
+  .code-preview-head {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .code-preview-head h3 {
+    font-size: 16px;
+  }
+
+  .code-preview-head p {
+    font-size: 11px;
+  }
+
+  .code-preview .code-block {
+    font-size: 11px;
+    padding: 8px 0;
+  }
+
+  .code-block {
+    max-height: 260px;
+    font-size: 11px;
+  }
+
+  .code-line {
+    padding: 0 10px;
+  }
+
+  .code-line-no {
+    width: 32px;
+    margin-right: 8px;
+  }
+
+  .about-layer {
+    padding: 12px;
+  }
+
+  .about-dialog,
+  .help-dialog {
+    width: calc(100vw - 24px);
+    border-radius: 18px;
+  }
+
+  .about-dialog header,
+  .help-dialog header {
+    padding: 14px;
+    gap: 8px;
+  }
+
+  .about-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .about-grid div {
+    padding: 10px;
+  }
+
+  .help-steps {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .help-steps div {
+    padding: 10px 12px;
+  }
+
+  .prompt-tray {
+    width: calc(100vw - 80px);
+    left: -4px;
+  }
+
+  .drawer-scrim.open {
+    background: rgba(15, 23, 42, .28);
+  }
+
+  .expand-code {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
 }
