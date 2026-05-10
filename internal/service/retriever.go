@@ -46,9 +46,8 @@ func NewRetriever(db *gorm.DB, embedder *Embedder, cfg config.Config) *Retriever
 }
 
 func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string, hints []string) ([]Citation, error) {
-	features := analyzeSearchFeatures(query, hints)
-	expandedQuery := expandQueryText(query, hints)
-	embedding, err := r.embedder.Embed(ctx, expandedQuery)
+	plan := buildQueryPlan(ctx, r.cfg, query, hints)
+	embedding, err := r.embedder.Embed(ctx, plan.EmbeddingText)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +60,7 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 	if err != nil {
 		return nil, err
 	}
-	keywordRows, err := r.keywordSearch(ctx, repositoryID, features, r.cfg.TopK*2)
+	keywordRows, err := r.keywordSearch(ctx, repositoryID, plan.Features, r.cfg.TopK*2)
 	if err != nil {
 		return nil, err
 	}

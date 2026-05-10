@@ -30,11 +30,18 @@ type chatResponse struct {
 }
 
 func callLLM(ctx context.Context, cfg config.Config, system, user string) (string, error) {
+	return callLLMWithModel(ctx, cfg, cfg.OpenAIModel, system, user)
+}
+
+func callLLMWithModel(ctx context.Context, cfg config.Config, model, system, user string) (string, error) {
 	if cfg.OpenAIAPIKey == "" {
 		return "", errors.New("OPENAI_API_KEY is not configured")
 	}
+	if strings.TrimSpace(model) == "" {
+		model = cfg.OpenAIModel
+	}
 	body, err := json.Marshal(chatRequest{
-		Model: cfg.OpenAIModel,
+		Model: model,
 		Messages: []chatMessage{
 			{Role: "system", Content: system},
 			{Role: "user", Content: user},

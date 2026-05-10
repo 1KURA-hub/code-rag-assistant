@@ -1,0 +1,64 @@
+package service
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestLocalQueryPlanKeepsAliasesAndFeatures(t *testing.T) {
+	plan := localQueryPlan("这个项目的消息消费主流程是什么？", []string{"mq/consumer.go"})
+
+	for _, want := range []string{"message", "consumer", "queue"} {
+		if !strings.Contains(plan.EmbeddingText, want) {
+			t.Fatalf("EmbeddingText = %q, want alias %q", plan.EmbeddingText, want)
+		}
+	}
+	if !containsString(plan.Features.Paths, "mq/consumer.go") {
+		t.Fatalf("Features.Paths = %v, want mq/consumer.go", plan.Features.Paths)
+	}
+}
+
+func TestMergeModelQueryPlanAddsEmbeddingAndStructuredTerms(t *testing.T) {
+	plan := localQueryPlan("为什么请求成功但数据库没数据？", nil)
+	mergeModelQueryPlan(&plan, modelQueryPlan{
+		RewrittenQuery: "request success but mysql record missing async persistence rabbitmq consumer",
+		Terms:          []string{"mysql", "async persistence", "rabbitmq"},
+		Paths:          []string{"internal/service/consumer.go"},
+		Symbols:        []string{"HandleMessage"},
+		SymbolTypes:    []string{"function", "invalid"},
+		Languages:      []string{"go"},
+	}, 20)
+
+	if !strings.HasPrefix(plan.EmbeddingText, "request success but mysql record missing") {
+		t.Fatalf("EmbeddingText = %q, want rewritten query prefix", plan.EmbeddingText)
+	}
+	for _, want := range []string{"mysql", "async persistence", "rabbitmq"} {
+		if !containsString(plan.Features.Terms, want) {
+			t.Fatalf("Features.Terms = %v, want %q", plan.Features.Terms, want)
+		}
+	}
+	if !containsString(plan.Features.Paths, "internal/service/consumer.go") {
+		t.Fatalf("Features.Paths = %v, want model path", plan.Features.Paths)
+	}
+	if !containsString(plan.Features.Symbols, "handlemessage") {
+		t.Fatalf("Features.Symbols = %v, want handlemessage", plan.Features.Symbols)
+	}
+	if !containsString(plan.Features.SymbolTypes, "function") {
+		t.Fatalf("Features.SymbolTypes = %v, want function", plan.Features.SymbolTypes)
+	}
+	if containsString(plan.Features.SymbolTypes, "invalid") {
+		t.Fatalf("Features.SymbolTypes = %v, should reject invalid symbol type", plan.Features.SymbolTypes)
+	}
+	if !containsString(plan.Features.Languages, "go") {
+		t.Fatalf("Features.Languages = %v, want go", plan.Features.Languages)
+	}
+}
+
+func TestExtractJSONObjectFromMarkdownFence(t *testing.T) {
+	input := "```json\n{\"rewritten_query\":\"redis stream\",\"terms\":[\"redis\"]}\n```"
+	got := extractJSONObject(input)
+
+	if got != "{\"rewritten_query\":\"redis stream\",\"terms\":[\"redis\"]}" {
+		t.Fatalf("extractJSONObject() = %q", got)
+	}
+}

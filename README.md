@@ -222,12 +222,18 @@ export EMBEDDING_PROVIDER="remote"
 export EMBEDDING_BATCH_SIZE="10"
 export PROMPT_CITATION_LIMIT="5"
 export PROMPT_CHUNK_MAX_CHARS="1200"
+export QUERY_REWRITE_ENABLED="false"
+export QUERY_REWRITE_MODEL="gpt-4o-mini"
+export QUERY_REWRITE_TIMEOUT_SECONDS="3"
+export QUERY_REWRITE_MAX_TERMS="20"
 export GITHUB_PROXY_URL=""
 ```
 
 也可以使用 OpenAI 兼容接口，例如 DashScope、OpenRouter 等。未配置 API Key 时，项目会使用本地 hash embedding fallback，便于本地跑通流程，但检索质量不等同于真实 embedding 模型。
 
 `PROMPT_CITATION_LIMIT` 和 `PROMPT_CHUNK_MAX_CHARS` 用来限制传给大模型的代码依据数量和单个片段长度，降低长回答的等待时间；前端代码依据栏仍展示完整检索结果。
+
+`QUERY_REWRITE_ENABLED` 用来开启检索前的小模型 QueryPlan 增强。开启后，系统会先把中文问题或 diff 改写成更适合检索英文源码的查询，并提取路径、符号、语言和技术词；如果改写超时、失败或 JSON 解析失败，会自动退回本地规则，不影响问答主链路。`QUERY_REWRITE_MODEL` 可以单独指定更快、更便宜的模型，最终回答仍使用 `OPENAI_MODEL`。
 
 如果服务器访问 GitHub ZIP 超时，可以配置 GitHub 代理，例如：
 
