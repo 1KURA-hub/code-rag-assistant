@@ -14,10 +14,10 @@ var queryAliases = []struct {
 		},
 	},
 	{
-		Terms: []string{"redis stream", "stream", "转发", "pending", "消费者组", "reclaim", "relay"},
+		Terms: []string{"redis stream", "stream", "转发", "pending", "消费者组", "reclaim", "relay", "挂了", "崩溃", "恢复", "没处理完", "临时消息表"},
 		Aliases: []string{
 			"redis", "stream", "relay", "xreadgroup", "xgroup", "xadd", "xack",
-			"xautoclaim", "pending", "consumer", "group", "reclaim",
+			"xautoclaim", "pending", "consumer", "group", "reclaim", "handleStreamMessage",
 		},
 	},
 	{
@@ -28,10 +28,22 @@ var queryAliases = []struct {
 		},
 	},
 	{
-		Terms: []string{"选课", "课程", "库存", "扣减", "余量"},
+		Terms: []string{"选课", "抢课", "选择课程", "选同一门课"},
 		Aliases: []string{
-			"course", "select", "selection", "enroll", "enrollment", "stock",
-			"quota", "capacity", "decrement",
+			"course", "select", "selection", "enroll", "enrollment", "SelectCourse",
+		},
+	},
+	{
+		Terms: []string{"库存", "扣减", "预扣", "名额", "余量", "扣完库存", "库存不够"},
+		Aliases: []string{
+			"stock", "quota", "capacity", "decrement", "course:stock", "LoadStockToRedis",
+		},
+	},
+	{
+		Terms: []string{"课程", "课程详情", "课程列表", "查看课程", "查询课程", "数据库压力", "很多人同时查看", "缓存", "击穿", "穿透"},
+		Aliases: []string{
+			"course", "courses", "GetCourseById", "GetCourseList", "cache",
+			"singleflight", "sf", "bloom", "filter", "redis", "gorm",
 		},
 	},
 	{
@@ -42,10 +54,11 @@ var queryAliases = []struct {
 		},
 	},
 	{
-		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "有哪些接口", "主要接口", "接口入口"},
+		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "有哪些接口", "主要接口", "接口入口", "哪个学生", "哪门课", "参数"},
 		Aliases: []string{
 			"api", "router", "route", "routes", "handler", "endpoint",
-			"get", "post", "group", "registerroutes", "bindjson",
+			"get", "post", "group", "registerroutes", "bindjson", "context",
+			"user_id", "Param", "SelectCourse",
 		},
 	},
 	{
