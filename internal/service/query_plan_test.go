@@ -6,15 +6,15 @@ import (
 )
 
 func TestLocalQueryPlanKeepsAliasesAndFeatures(t *testing.T) {
-	plan := localQueryPlan("这个项目的消息消费主流程是什么？", []string{"mq/consumer.go"})
+	plan := localQueryPlan("这个项目的代码问答检索流程是什么？", []string{"internal/service/retriever.go"})
 
-	for _, want := range []string{"message", "consumer", "queue"} {
+	for _, want := range []string{"retriever", "Search", "citation"} {
 		if !strings.Contains(plan.EmbeddingText, want) {
 			t.Fatalf("EmbeddingText = %q, want alias %q", plan.EmbeddingText, want)
 		}
 	}
-	if !containsString(plan.Features.Paths, "mq/consumer.go") {
-		t.Fatalf("Features.Paths = %v, want mq/consumer.go", plan.Features.Paths)
+	if !containsString(plan.Features.Paths, "internal/service/retriever.go") {
+		t.Fatalf("Features.Paths = %v, want internal/service/retriever.go", plan.Features.Paths)
 	}
 }
 

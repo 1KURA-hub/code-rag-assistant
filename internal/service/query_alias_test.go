@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestMatchedAliasesForChineseMessageQuestion(t *testing.T) {
-	aliases := matchedAliases("这个项目的消息消费和重试流程是什么？")
+func TestMatchedAliasesForRepositoryIndexQuestion(t *testing.T) {
+	aliases := matchedAliases("这个项目的仓库导入和索引流程是什么？")
 
-	for _, want := range []string{"message", "consumer", "retry", "queue"} {
+	for _, want := range []string{"repository", "ingest", "indexing", "github"} {
 		if !containsString(aliases, want) {
 			t.Fatalf("matchedAliases() = %v, want %q", aliases, want)
 		}
@@ -18,7 +18,7 @@ func TestMatchedAliasesForChineseMessageQuestion(t *testing.T) {
 func TestMatchedAliasesForAPIQuestion(t *testing.T) {
 	aliases := matchedAliases("这个项目主要接口有哪些？")
 
-	for _, want := range []string{"api", "router", "route", "handler", "registerroutes"} {
+	for _, want := range []string{"api", "router", "route", "handler", "RegisterRoutes"} {
 		if !containsString(aliases, want) {
 			t.Fatalf("matchedAliases() = %v, want %q", aliases, want)
 		}
@@ -26,9 +26,9 @@ func TestMatchedAliasesForAPIQuestion(t *testing.T) {
 }
 
 func TestExpandQueryTextKeepsHintsAndAddsAliases(t *testing.T) {
-	expanded := expandQueryText("Redis Stream 转发逻辑", []string{"mq/relay.go"})
+	expanded := expandQueryText("代码分片和 AST 解析逻辑", []string{"internal/service/chunker.go"})
 
-	for _, want := range []string{"Redis Stream 转发逻辑", "mq/relay.go", "xreadgroup", "xautoclaim", "relay"} {
+	for _, want := range []string{"代码分片和 AST 解析逻辑", "internal/service/chunker.go", "chunk", "parser", "ChunkSourceFile"} {
 		if !strings.Contains(expanded, want) {
 			t.Fatalf("expandQueryText() = %q, want to contain %q", expanded, want)
 		}

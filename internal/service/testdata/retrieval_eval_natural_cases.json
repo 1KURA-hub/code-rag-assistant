@@ -1,388 +1,429 @@
 [
   {
-    "category": "async_consistency",
-    "name": "success_response_before_mysql_record",
-    "question": "为什么接口返回成功了，但是数据库里可能还没有选课记录？",
+    "category": "chat",
+    "name": "ask_chain",
+    "question": "answer 链路是怎么根据用户问题生成回答的？",
     "relevant": [
-      {"file_path": "api/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"},
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+      {"file_path": "internal/service/answer.go", "symbol_name": "Ask"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "Search"}
     ]
   },
   {
-    "category": "async_consistency",
-    "name": "recover_after_crash_before_db_write",
-    "question": "如果服务在扣完库存后突然挂了，这条请求怎么恢复？",
+    "category": "chat",
+    "name": "answer_ready_check",
+    "question": "代码问答前是在哪里判断仓库必须 ready 的？",
     "relevant": [
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "mq/relay.go", "symbol_name": "relayNewMessages"},
-      {"file_path": "mq/relay.go", "symbol_name": "reclaimPendingMessages"},
-      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"}
+      {"file_path": "internal/service/answer.go", "symbol_name": "ensureReady"}
     ]
   },
   {
-    "category": "async_consistency",
-    "name": "mq_publish_confirm_before_ack_stream",
-    "question": "预扣成功的消息什么时候才会从临时消息表里确认删除？",
+    "category": "chat",
+    "name": "local_answer",
+    "question": "没有配置大模型时本地兜底回答是怎么拼接的？",
     "relevant": [
-      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"},
-      {"file_path": "mq/publisher.go", "symbol_name": "SendWithContext"},
-      {"file_path": "mq/publisher.go", "symbol_name": "PublishWithConfirm"}
+      {"file_path": "internal/service/answer.go", "symbol_name": "localAnswer"}
     ]
   },
   {
-    "category": "async_consistency",
-    "name": "pending_stream_message_reclaimed",
-    "question": "后台转发任务重启后，之前没处理完的消息会怎么重新处理？",
+    "category": "chat",
+    "name": "prompt_citations",
+    "question": "promptCitations 为什么要限制传给模型的代码依据数量？",
     "relevant": [
-      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"},
-      {"file_path": "mq/relay.go", "symbol_name": "ensureRelayGroup"},
-      {"file_path": "mq/relay.go", "symbol_name": "reclaimPendingMessages"}
+      {"file_path": "internal/service/answer.go", "symbol_name": "promptCitations"}
     ]
   },
   {
-    "category": "async_consistency",
-    "name": "db_write_failure_retry",
-    "question": "消息已经进入队列后，写数据库失败会怎么处理？",
+    "category": "llm",
+    "name": "llm_call",
+    "question": "callLLM 函数是怎么调用大模型接口的？",
     "relevant": [
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
-      {"file_path": "mq/consumer.go", "symbol_name": "retryRoutingKey"},
-      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareCourseSelectTopology"}
+      {"file_path": "internal/service/llm.go", "symbol_name": "callLLM"}
     ]
   },
   {
-    "category": "async_consistency",
-    "name": "dead_letter_compensation",
-    "question": "多次处理失败的选课请求最后怎么兜底修复？",
+    "category": "llm",
+    "name": "chat_request_struct",
+    "question": "请求大模型接口时 chatRequest 结构体保存了哪些字段？",
     "relevant": [
-      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
-      {"file_path": "mq/consumer.go", "symbol_name": "publishToDLQAndAck"},
-      {"file_path": "cmd/compensate-dlq/main.go", "symbol_name": "main"}
+      {"file_path": "internal/service/llm.go", "symbol_name": "chatRequest"}
     ]
   },
   {
-    "category": "idempotency",
-    "name": "duplicate_click_select",
-    "question": "用户连续点两次选课按钮，系统怎么避免重复处理？",
+    "category": "repo",
+    "name": "repo_index_task",
+    "question": "CreateAndIndex 是怎么创建仓库索引任务的？",
     "relevant": [
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "repository/redis/keys.go", "symbol_name": "RequestKey"},
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "CreateAndIndex"}
     ]
   },
   {
-    "category": "idempotency",
-    "name": "duplicate_mq_delivery",
-    "question": "队列重复投递同一条选课消息时，怎么保证不会重复落库？",
+    "category": "repo",
+    "name": "background_index",
+    "question": "仓库后台 index 函数下载和索引代码的流程是什么？",
     "relevant": [
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"},
-      {"file_path": "model/selection.go", "symbol_name": "Selection"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "index"},
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"}
     ]
   },
   {
-    "category": "idempotency",
-    "name": "repeat_after_drop_course",
-    "question": "学生退课后再次选择同一门课，旧记录是怎么处理的？",
+    "category": "repo",
+    "name": "status_update",
+    "question": "仓库索引过程中状态 pending indexing ready 是怎么更新的？",
     "relevant": [
-      {"file_path": "service/drop_course.go", "symbol_name": "DropCourse"},
-      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"},
-      {"file_path": "model/selection.go", "symbol_name": "Selection"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "updateStatus"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "updateReady"}
     ]
   },
   {
-    "category": "api_flow",
-    "name": "poll_selection_result",
-    "question": "前端发起选课后，为什么还要继续查询结果接口？",
+    "category": "repo",
+    "name": "failed_keep_ready",
+    "question": "重新索引失败时为什么可以继续使用旧分片？",
     "relevant": [
-      {"file_path": "api/select.go", "symbol_name": "SelectResult"},
-      {"file_path": "service/query_result.go", "symbol_name": "QuerySelectResult"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "GetSelectionRequestStatus"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "markFailedOrKeepReady"}
     ]
   },
   {
-    "category": "api_flow",
-    "name": "selection_status_transition",
-    "question": "排队中的选课请求最后是怎么变成成功或者失败状态的？",
+    "category": "repo",
+    "name": "repo_cache",
+    "question": "仓库状态 Redis 缓存是怎么读取和失效的？",
     "relevant": [
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestSuccess"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestFailed"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "Get"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "deleteRepoCache"}
     ]
   },
   {
-    "category": "api_flow",
-    "name": "select_api_validation",
-    "question": "选课接口收到请求后，怎么知道是哪个学生和哪门课？",
+    "category": "repo",
+    "name": "repo_cache_key",
+    "question": "仓库状态缓存在 Redis 中的 key 是怎么生成的？",
     "relevant": [
-      {"file_path": "api/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "router/router.go", "symbol_name": "InitRouter"}
+      {"file_path": "internal/service/ingest.go", "symbol_name": "repoCacheKey"}
     ]
   },
   {
-    "category": "api_flow",
-    "name": "list_selected_courses",
-    "question": "用户在哪里能查到自己已经选择了哪些课程？",
+    "category": "github",
+    "name": "github_parse",
+    "question": "GitHub 仓库 URL 是怎么解析 owner 和 repo name 的？",
     "relevant": [
-      {"file_path": "api/select.go", "symbol_name": "ListSelections"},
-      {"file_path": "service/selection_list.go", "symbol_name": "ListStudentSelections"},
-      {"file_path": "repository/mysql/selection.go", "symbol_name": "ListSelectionsByStudentID"}
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "Parse"}
     ]
   },
   {
-    "category": "stock",
-    "name": "fast_fail_when_stock_empty",
-    "question": "库存不够时，为什么不用访问数据库也能很快返回？",
+    "category": "github",
+    "name": "github_download",
+    "question": "GitHub 仓库 zip 文件是怎么下载的？",
     "relevant": [
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "initialize/redis.go", "symbol_name": "InitRedis"},
-      {"file_path": "initialize/redis.go", "symbol_name": "LoadStockToRedis"}
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "DownloadZip"},
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "download"}
     ]
   },
   {
-    "category": "stock",
-    "name": "mysql_stock_final_write",
-    "question": "Redis 扣了库存以后，数据库里的课程库存什么时候真正减少？",
+    "category": "github",
+    "name": "github_proxy",
+    "question": "GITHUB_PROXY_URL 是怎么影响 GitHub 下载地址的？",
     "relevant": [
-      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "downloadURL"}
     ]
   },
   {
-    "category": "stock",
-    "name": "drop_course_restore_stock",
-    "question": "退课时课程名额和用户选课状态是怎么恢复的？",
+    "category": "chunking",
+    "name": "go_ast_chunking",
+    "question": "Go 文件是怎么通过 AST 进行分片的？",
     "relevant": [
-      {"file_path": "api/select.go", "symbol_name": "DropCourse"},
-      {"file_path": "service/drop_course.go", "symbol_name": "DropCourse"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "DeleteSelectionRequestStatus"}
+      {"file_path": "internal/service/chunker.go", "symbol_name": "ChunkSourceFile"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "chunkGoFile"}
     ]
   },
   {
-    "category": "cache_query",
-    "name": "hot_course_query",
-    "question": "很多人同时查看同一门课程时，怎么减少数据库压力？",
+    "category": "chunking",
+    "name": "line_mapping",
+    "question": "goNodeChunk 是怎么得到代码分片起止行号的？",
     "relevant": [
-      {"file_path": "api/course.go", "symbol_name": "GetCourseById"},
-      {"file_path": "service/course.go", "symbol_name": "GetCourseById"},
-      {"file_path": "service/course.go", "symbol_name": "sf"}
+      {"file_path": "internal/service/chunker.go", "symbol_name": "goNodeChunk"}
     ]
   },
   {
-    "category": "cache_query",
-    "name": "invalid_course_query",
-    "question": "有人一直查不存在的课程，系统怎么挡住这种请求？",
+    "category": "chunking",
+    "name": "receiver_name",
+    "question": "方法分片时 receiverName 是怎么得到结构体接收者名称的？",
     "relevant": [
-      {"file_path": "middleware/bloomfilter.go", "symbol_name": "Bloomfilter"},
-      {"file_path": "initialize/bloomfilter.go", "symbol_name": "InitBloomFilter"},
-      {"file_path": "service/course.go", "symbol_name": "GetCourseById"}
+      {"file_path": "internal/service/chunker.go", "symbol_name": "receiverName"}
     ]
   },
   {
-    "category": "cache_query",
-    "name": "empty_cache_for_missing_course",
-    "question": "课程不存在时，为什么后面再查同一个课程不会一直打到数据库？",
+    "category": "chunking",
+    "name": "value_spec_chunk",
+    "question": "全局常量和变量声明是怎么作为代码分片保存的？",
     "relevant": [
-      {"file_path": "service/course.go", "symbol_name": "GetCourseById"}
+      {"file_path": "internal/service/chunker.go", "symbol_name": "valueSpecNames"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "valueSpecSymbolType"}
+    ]
+  },
+  {
+    "category": "chunking",
+    "name": "line_window_chunk",
+    "question": "普通文件按固定行窗口分片时 overlap 是怎么处理的？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "ChunkContent"}
+    ]
+  },
+  {
+    "category": "indexing",
+    "name": "index_repository",
+    "question": "IndexRepository 是怎么扫描文件、分片、embedding 并写入数据库的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"}
+    ]
+  },
+  {
+    "category": "indexing",
+    "name": "embedding_text",
+    "question": "chunkEmbeddingText 是怎么把文件路径、符号名和源码拼成 embedding 文本的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "chunkEmbeddingText"}
+    ]
+  },
+  {
+    "category": "indexing",
+    "name": "chunk_language",
+    "question": "chunkLanguage 是怎么根据文件后缀和分片信息判断语言的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "chunkLanguage"}
+    ]
+  },
+  {
+    "category": "indexing",
+    "name": "search_vector_update",
+    "question": "全文检索 search_vector 是在什么时候写入 code_chunks 的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "updateChunkSearchVectors"},
+      {"file_path": "internal/model/search_vector.go", "symbol_name": "CodeChunkSearchVectorExpression"}
+    ]
+  },
+  {
+    "category": "embedding",
+    "name": "embedding_batch",
+    "question": "索引阶段是怎么批量调用 embedding 模型的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "EmbedBatch"}
+    ]
+  },
+  {
+    "category": "embedding",
+    "name": "embed_remote_batch",
+    "question": "embedRemoteBatch 是怎么请求远程 embedding 接口并解析向量的？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "embedRemoteBatch"}
+    ]
+  },
+  {
+    "category": "embedding",
+    "name": "local_embedding",
+    "question": "本地 hash embedding fallback 是怎么生成向量的？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "embedLocal"}
+    ]
+  },
+  {
+    "category": "embedding",
+    "name": "normalize_vector",
+    "question": "normalizeVector 为什么要把 embedding 向量归一化？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "normalizeVector"}
+    ]
+  },
+  {
+    "category": "embedding",
+    "name": "vector_literal",
+    "question": "VectorLiteral 是怎么把向量转换成 pgvector 查询参数的？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "VectorLiteral"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "vector_search",
+    "question": "pgvector 向量检索是怎么按余弦距离召回代码片段的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "vectorSearch"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "keyword_full_text",
+    "question": "关键词检索是怎么使用 PostgreSQL 全文检索召回代码内容的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "keywordSearch"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "buildKeywordSearchQuery"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "rrf_fusion",
+    "question": "RRF 是怎么融合向量检索和关键词检索结果的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "fuseCitationsRRF"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "query_feature_extract",
+    "question": "analyzeSearchFeatures 是怎么提取路径函数名和语言关键词的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "analyzeSearchFeatures"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "split_search_terms",
+    "question": "splitSearchTerms 是怎么把中英文问题拆成检索关键词的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "splitSearchTerms"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "normalizeSearchText"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "keyword_terms",
+    "question": "keywordSearchTerms 和 keywordContentTerms 分别怎么组织关键词查询条件？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "keywordSearchTerms"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "keywordContentTerms"}
+    ]
+  },
+  {
+    "category": "retrieval",
+    "name": "query_alias",
+    "question": "query alias 是怎么把中文问题扩展成英文检索词的？",
+    "relevant": [
+      {"file_path": "internal/service/query_alias.go", "symbol_name": "expandQueryText"},
+      {"file_path": "internal/service/query_alias.go", "symbol_name": "matchedAliases"}
+    ]
+  },
+  {
+    "category": "impact",
+    "name": "diff_hints",
+    "question": "diff 文本是怎么提取变更路径和标识符 hints 的？",
+    "relevant": [
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffHints"},
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffPaths"}
+    ]
+  },
+  {
+    "category": "impact",
+    "name": "impact_chain",
+    "question": "diff 影响分析链路是怎么生成风险点和测试建议的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "Analyze"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "localImpact"}
+    ]
+  },
+  {
+    "category": "impact",
+    "name": "impact_match_paths",
+    "question": "影响分析里 changed path 是怎么和检索到的 citation 匹配的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "matchDiffPaths"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "pathMatched"}
+    ]
+  },
+  {
+    "category": "impact",
+    "name": "impact_filter_citations",
+    "question": "filterCitationsByPaths 是怎么只保留 diff 相关代码依据的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "filterCitationsByPaths"}
+    ]
+  },
+  {
+    "category": "impact",
+    "name": "impact_prompt",
+    "question": "影响分析调用大模型前的 prompt 是怎么组织 diff 和代码依据的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "impactUserPrompt"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "impactSystemPrompt"}
+    ]
+  },
+  {
+    "category": "handler",
+    "name": "register_routes",
+    "question": "Gin 路由是在哪里注册 repo ask impact 这些接口的？",
+    "relevant": [
+      {"file_path": "internal/handler/routes.go", "symbol_name": "RegisterRoutes"}
+    ]
+  },
+  {
+    "category": "handler",
+    "name": "ask_handler",
+    "question": "ask 接口 handler 是怎么绑定 JSON 参数并调用 service 的？",
+    "relevant": [
+      {"file_path": "internal/handler/ask.go", "symbol_name": "ask"}
+    ]
+  },
+  {
+    "category": "handler",
+    "name": "repo_handler",
+    "question": "创建仓库和查询仓库状态的 handler 分别做了什么？",
+    "relevant": [
+      {"file_path": "internal/handler/repo.go", "symbol_name": "createRepository"},
+      {"file_path": "internal/handler/repo.go", "symbol_name": "getRepository"}
+    ]
+  },
+  {
+    "category": "config",
+    "name": "config_load",
+    "question": "配置和环境变量是怎么加载默认值的？",
+    "relevant": [
+      {"file_path": "internal/config/config.go", "symbol_name": "Load"}
+    ]
+  },
+  {
+    "category": "config",
+    "name": "config_getenv_int",
+    "question": "整数类型的环境变量是怎么读取并设置默认值的？",
+    "relevant": [
+      {"file_path": "internal/config/config.go", "symbol_name": "getenvInt"}
     ]
   },
   {
     "category": "startup",
-    "name": "service_start_background_workers",
-    "question": "服务启动后，哪些后台任务会自动开始处理选课消息？",
+    "name": "postgres_init",
+    "question": "服务启动时 PostgreSQL 和 pgvector 是怎么初始化的？",
     "relevant": [
       {"file_path": "cmd/server/main.go", "symbol_name": "main"},
-      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"},
-      {"file_path": "mq/consumer.go", "symbol_name": "Consumer"}
-    ]
-  },
-  {
-    "category": "user_auth",
-    "name": "student_register_flow",
-    "question": "学生注册时请求参数会经过哪些代码写入数据库？",
-    "relevant": [
-      {"file_path": "api/user.go", "symbol_name": "Register"},
-      {"file_path": "service/student.go", "symbol_name": "Register"},
-      {"file_path": "repository/mysql/student.go", "symbol_name": "CreateStu"}
-    ]
-  },
-  {
-    "category": "user_auth",
-    "name": "student_login_flow",
-    "question": "学生登录时系统怎么校验密码并返回登录结果？",
-    "relevant": [
-      {"file_path": "api/user.go", "symbol_name": "Login"},
-      {"file_path": "service/student.go", "symbol_name": "Login"},
-      {"file_path": "repository/mysql/student.go", "symbol_name": "GetBySid"}
-    ]
-  },
-  {
-    "category": "user_auth",
-    "name": "jwt_user_context",
-    "question": "后续接口是怎么从登录凭证里拿到当前学生 ID 的？",
-    "relevant": [
-      {"file_path": "middleware/auth.go", "symbol_name": "AuthMiddleware"},
-      {"file_path": "api/select.go", "symbol_name": "SelectCourse"}
-    ]
-  },
-  {
-    "category": "course_query",
-    "name": "course_list_flow",
-    "question": "课程列表接口是怎么从数据库读取课程数据的？",
-    "relevant": [
-      {"file_path": "api/course.go", "symbol_name": "GetCourseList"},
-      {"file_path": "service/course.go", "symbol_name": "GetCourseList"},
-      {"file_path": "repository/mysql/course.go", "symbol_name": "GetCourseList"}
-    ]
-  },
-  {
-    "category": "course_query",
-    "name": "course_detail_flow",
-    "question": "查询某一门课程详情时，缓存未命中后会怎么回源数据库？",
-    "relevant": [
-      {"file_path": "api/course.go", "symbol_name": "GetCourseById"},
-      {"file_path": "service/course.go", "symbol_name": "GetCourseById"},
-      {"file_path": "repository/mysql/course.go", "symbol_name": "GetCourseById"}
-    ]
-  },
-  {
-    "category": "cache_query",
-    "name": "bloom_filter_init",
-    "question": "课程布隆过滤器启动时是怎么预热真实课程 ID 的？",
-    "relevant": [
-      {"file_path": "initialize/bloomfilter.go", "symbol_name": "InitBloomFilter"},
-      {"file_path": "middleware/bloomfilter.go", "symbol_name": "Bloomfilter"}
-    ]
-  },
-  {
-    "category": "mq_topology",
-    "name": "rabbitmq_topology",
-    "question": "RabbitMQ 的主队列、重试队列和死信队列是在哪里声明和绑定的？",
-    "relevant": [
-      {"file_path": "initialize/rabbitmq.go", "symbol_name": "InitRabbitMQ"},
-      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareCourseSelectTopology"},
-      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareAndBindQueue"}
-    ]
-  },
-  {
-    "category": "mq_topology",
-    "name": "publisher_confirm_flow",
-    "question": "发布选课消息时，代码怎么确认 RabbitMQ 已经收到消息？",
-    "relevant": [
-      {"file_path": "mq/publisher.go", "symbol_name": "SendWithContext"},
-      {"file_path": "mq/publisher.go", "symbol_name": "PublishWithConfirm"}
-    ]
-  },
-  {
-    "category": "mq_topology",
-    "name": "retry_headers",
-    "question": "失败消息的重试次数和失败原因是怎么保存在消息里的？",
-    "relevant": [
-      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
-      {"file_path": "mq/consumer.go", "symbol_name": "copyHeaders"},
-      {"file_path": "mq/consumer.go", "symbol_name": "getRetryCount"}
-    ]
-  },
-  {
-    "category": "mq_topology",
-    "name": "bad_message_to_dlq",
-    "question": "如果队列里的消息体格式坏了，系统会怎么处理这条消息？",
-    "relevant": [
-      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
-      {"file_path": "mq/consumer.go", "symbol_name": "publishToDLQAndAck"}
-    ]
-  },
-  {
-    "category": "stream_relay",
-    "name": "stream_trim_policy",
-    "question": "Redis Stream 消息表会不会一直增长，代码里怎么裁剪？",
-    "relevant": [
-      {"file_path": "mq/relay.go", "symbol_name": "trimSelectStream"}
-    ]
-  },
-  {
-    "category": "stream_relay",
-    "name": "stream_consumer_name",
-    "question": "Redis Stream relay 的消费者名称是怎么生成的？",
-    "relevant": [
-      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"}
-    ]
-  },
-  {
-    "category": "stream_relay",
-    "name": "stream_group_create",
-    "question": "Redis Stream 消费组不存在时，代码是怎么创建消费组的？",
-    "relevant": [
-      {"file_path": "mq/relay.go", "symbol_name": "ensureRelayGroup"}
-    ]
-  },
-  {
-    "category": "request_status",
-    "name": "request_status_key",
-    "question": "选课请求的 pending success failed 状态存在 Redis 的哪个 key 里？",
-    "relevant": [
-      {"file_path": "repository/redis/keys.go", "symbol_name": "RequestKey"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "GetSelectionRequestStatus"},
-      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestSuccess"}
-    ]
-  },
-  {
-    "category": "request_status",
-    "name": "result_fallback_mysql",
-    "question": "查询选课结果时，如果 Redis 状态不存在，为什么还要查 MySQL？",
-    "relevant": [
-      {"file_path": "service/query_result.go", "symbol_name": "QuerySelectResult"},
-      {"file_path": "repository/mysql/selection.go", "symbol_name": "GetSelectionBySIDAndCID"}
-    ]
-  },
-  {
-    "category": "idempotency",
-    "name": "selection_unique_index",
-    "question": "数据库层面怎么限制同一个学生不能重复选择同一门课？",
-    "relevant": [
-      {"file_path": "model/selection.go", "symbol_name": "Selection"}
-    ]
-  },
-  {
-    "category": "selection_record",
-    "name": "selection_status_text",
-    "question": "查询选课记录列表时，选课状态数字是怎么转换成文字的？",
-    "relevant": [
-      {"file_path": "repository/mysql/selection.go", "symbol_name": "SelectionStatusText"},
-      {"file_path": "repository/mysql/selection.go", "symbol_name": "ListSelectionsByStudentID"}
-    ]
-  },
-  {
-    "category": "compensation",
-    "name": "dlq_compensate_existing_record",
-    "question": "死信补偿时，如果这条选课记录其实已经落库了，会怎么处理？",
-    "relevant": [
-      {"file_path": "cmd/compensate-dlq/main.go", "symbol_name": "compensateOne"},
-      {"file_path": "service/compensate.go", "symbol_name": "CompensateRecord"}
-    ]
-  },
-  {
-    "category": "selection_record",
-    "name": "create_record_transaction",
-    "question": "真正创建选课记录时，MySQL 事务里做了哪些写操作？",
-    "relevant": [
-      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+      {"file_path": "internal/repository/postgres.go", "symbol_name": "OpenPostgres"}
     ]
   },
   {
     "category": "startup",
-    "name": "startup_init_order",
-    "question": "服务启动时 MySQL、Redis、布隆过滤器、RabbitMQ 和后台协程是怎么初始化的？",
+    "name": "app_wiring",
+    "question": "main 函数里 embedder fetcher indexer ingest retriever answer impact 是怎么组装的？",
     "relevant": [
-      {"file_path": "cmd/server/main.go", "symbol_name": "main"},
-      {"file_path": "initialize/mysql.go", "symbol_name": "InitMySQL"},
-      {"file_path": "initialize/redis.go", "symbol_name": "InitRedis"},
-      {"file_path": "initialize/rabbitmq.go", "symbol_name": "InitRabbitMQ"}
+      {"file_path": "cmd/server/main.go", "symbol_name": "main"}
+    ]
+  },
+  {
+    "category": "files",
+    "name": "scan_source_files",
+    "question": "ScanSourceFiles 是怎么递归扫描并过滤源码文件的？",
+    "relevant": [
+      {"file_path": "internal/util/files.go", "symbol_name": "ScanSourceFiles"}
+    ]
+  },
+  {
+    "category": "files",
+    "name": "strip_archive_root",
+    "question": "解压 GitHub zip 后 stripArchiveRoot 是怎么去掉根目录的？",
+    "relevant": [
+      {"file_path": "internal/util/files.go", "symbol_name": "stripArchiveRoot"}
+    ]
+  },
+  {
+    "category": "files",
+    "name": "unzip",
+    "question": "Unzip 函数是怎么解压 zip 文件并防止路径穿越的？",
+    "relevant": [
+      {"file_path": "internal/util/zip.go", "symbol_name": "Unzip"}
     ]
   }
 ]

@@ -9,10 +9,10 @@ import (
 )
 
 func TestKeywordSearchTermsIncludePathsAndSymbols(t *testing.T) {
-	features := analyzeSearchFeatures("mq/consumer.go 里的 handleRetryOrDLQ 怎么处理死信", nil)
+	features := analyzeSearchFeatures("internal/service/retriever.go 里的 keywordSearch 怎么处理关键词", nil)
 	terms := keywordSearchTerms(features)
 
-	for _, want := range []string{"mq/consumer.go", "handleretryordlq"} {
+	for _, want := range []string{"internal/service/retriever.go", "keywordsearch"} {
 		if !containsString(terms, want) {
 			t.Fatalf("keywordSearchTerms() = %v, want %q", terms, want)
 		}
@@ -72,15 +72,15 @@ func TestAnalyzeSearchFeaturesKeepsTechWordsAsTerms(t *testing.T) {
 }
 
 func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
-	features := analyzeSearchFeatures("mq/consumer.go里的reclaim函数怎么处理死信", nil)
+	features := analyzeSearchFeatures("internal/service/retriever.go里的Search函数怎么融合召回结果", nil)
 	terms := keywordContentTerms(features)
 
-	for _, excluded := range []string{"mq/consumer.go", "reclaim"} {
+	for _, excluded := range []string{"internal/service/retriever.go", "search"} {
 		if containsString(terms, excluded) {
 			t.Fatalf("keywordContentTerms() = %v, should not include strong feature %q", terms, excluded)
 		}
 	}
-	for _, want := range []string{"deadletter", "dlq"} {
+	for _, want := range []string{"retriever", "retrieve"} {
 		if !containsString(terms, want) {
 			t.Fatalf("keywordContentTerms() = %v, want alias term %q", terms, want)
 		}
@@ -88,7 +88,7 @@ func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
 }
 
 func TestBuildKeywordSearchQueryUsesFullTextForContentTerms(t *testing.T) {
-	features := analyzeSearchFeatures("redis stream 重试逻辑", nil)
+	features := analyzeSearchFeatures("向量检索和关键词检索怎么融合", nil)
 	query, args := buildKeywordSearchQuery(7, features, 10)
 
 	if !strings.Contains(query, "search_vector @@ plainto_tsquery('simple', ?)") {
@@ -140,8 +140,8 @@ func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 		},
 		{
 			name:  "path followed by chinese",
-			input: "mq/consumer.go里的逻辑",
-			want:  []string{"mq/consumer.go", "里的逻辑"},
+			input: "internal/service/retriever.go里的逻辑",
+			want:  []string{"internal/service/retriever.go", "里的逻辑"},
 		},
 		{
 			name:  "chinese around symbol",

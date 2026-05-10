@@ -7,64 +7,60 @@ var queryAliases = []struct {
 	Aliases []string
 }{
 	{
-		Terms: []string{"rabbitmq", "mq", "消息队列", "消息", "消费", "消费者", "重试", "死信", "ack", "nack"},
+		Terms: []string{"仓库", "导入", "索引", "重新索引", "下载", "解压", "扫描", "状态", "github", "repo", "repository"},
 		Aliases: []string{
-			"rabbitmq", "rabbit", "mq", "message", "consumer", "consume", "delivery",
-			"ack", "nack", "retry", "dead", "deadletter", "dlq", "queue", "exchange",
+			"repository", "repo", "ingest", "index", "indexing", "github", "download",
+			"zip", "unzip", "scan", "status", "pending", "ready", "failed", "CreateAndIndex",
 		},
 	},
 	{
-		Terms: []string{"redis stream", "stream", "转发", "pending", "消费者组", "reclaim", "relay", "挂了", "崩溃", "恢复", "没处理完", "临时消息表"},
+		Terms: []string{"分片", "切片", "ast", "语法树", "函数", "方法", "结构体", "类型", "常量", "变量", "行号", "声明"},
 		Aliases: []string{
-			"redis", "stream", "relay", "xreadgroup", "xgroup", "xadd", "xack",
-			"xautoclaim", "pending", "consumer", "group", "reclaim", "handleStreamMessage",
+			"chunk", "chunking", "ast", "parser", "parse", "declaration", "decl",
+			"function", "method", "type", "const", "var", "symbol", "line", "ChunkSourceFile",
 		},
 	},
 	{
-		Terms: []string{"幂等", "重复", "去重", "重复请求", "重复消息"},
+		Terms: []string{"embedding", "向量", "向量化", "批量", "归一化", "pgvector", "相似度", "余弦"},
 		Aliases: []string{
-			"idempotent", "idempotency", "dedup", "duplicate", "request", "message",
-			"redis", "unique", "lock",
+			"embedding", "embed", "Embed", "EmbedBatch", "vector", "pgvector",
+			"cosine", "normalize", "normalizeVector", "embedding_vector", "VectorLiteral",
 		},
 	},
 	{
-		Terms: []string{"选课", "抢课", "选择课程", "选同一门课"},
+		Terms: []string{"检索", "召回", "混合检索", "关键词", "全文检索", "重排", "融合", "rrf", "topk", "依据", "引用"},
 		Aliases: []string{
-			"course", "select", "selection", "enroll", "enrollment", "SelectCourse",
+			"retriever", "retrieve", "Search", "keyword", "full-text", "search_vector",
+			"plainto_tsquery", "rank", "rerank", "RRF", "TopK", "citation", "evidence",
+			"BuildQueryPlan", "query rewrite", "alias",
 		},
 	},
 	{
-		Terms: []string{"库存", "扣减", "预扣", "名额", "余量", "扣完库存", "库存不够"},
+		Terms: []string{"问答", "回答", "大模型", "模型", "prompt", "提示词", "上下文", "幻觉", "本地兜底"},
 		Aliases: []string{
-			"stock", "quota", "capacity", "decrement", "course:stock", "LoadStockToRedis",
+			"answer", "Ask", "LLM", "model", "prompt", "context", "citation",
+			"callLLM", "localAnswer", "promptCitations", "OpenAI",
 		},
 	},
 	{
-		Terms: []string{"课程", "课程详情", "课程列表", "查看课程", "查询课程", "数据库压力", "很多人同时查看", "缓存", "击穿", "穿透"},
+		Terms: []string{"diff", "变更", "影响分析", "风险", "测试建议", "修改影响", "git diff"},
 		Aliases: []string{
-			"course", "courses", "GetCourseById", "GetCourseList", "cache",
-			"singleflight", "sf", "bloom", "filter", "redis", "gorm",
+			"diff", "impact", "Analyze", "ExtractDiffHints", "risk", "risks",
+			"suggested_tests", "changed", "module",
 		},
 	},
 	{
-		Terms: []string{"jwt", "登录", "认证", "鉴权", "token", "中间件"},
+		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "参数", "请求", "响应", "main", "启动"},
 		Aliases: []string{
-			"jwt", "auth", "authentication", "authorization", "token", "middleware",
-			"claim", "claims",
+			"api", "router", "route", "routes", "handler", "endpoint", "request",
+			"response", "ShouldBindJSON", "RegisterRoutes", "main", "server",
 		},
 	},
 	{
-		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "有哪些接口", "主要接口", "接口入口", "哪个学生", "哪门课", "参数"},
+		Terms: []string{"配置", "环境变量", "数据库", "缓存", "redis", "postgres", "gorm", "docker", "部署"},
 		Aliases: []string{
-			"api", "router", "route", "routes", "handler", "endpoint",
-			"get", "post", "group", "registerroutes", "bindjson", "context",
-			"user_id", "Param", "SelectCourse",
-		},
-	},
-	{
-		Terms: []string{"lua", "脚本", "布隆", "过滤器", "bloom"},
-		Aliases: []string{
-			"lua", "script", "bloom", "filter", "redis", "eval", "sha",
+			"config", "env", "environment", "postgres", "postgresql", "gorm",
+			"redis", "cache", "cache aside", "docker", "compose", "OpenPostgres",
 		},
 	},
 }
