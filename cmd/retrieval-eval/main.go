@@ -33,8 +33,8 @@ type evalSummary struct {
 	Errors     int
 	HitAt1     int
 	HitAt3     int
-	HitAt5     int
-	RecallAt5  float64
+	HitAt8     int
+	RecallAt8  float64
 	Reciprocal float64
 }
 
@@ -81,12 +81,12 @@ func main() {
 			printDebug(ctx, cfg, tc, citations)
 		}
 
-		if result.HitAt5 {
-			fmt.Printf("[PASS@5] %s/%s first_hit=%d recall@5=%.2f\n", category, tc.Name, result.FirstHitRank, result.RecallAt5)
+		if result.HitAt8 {
+			fmt.Printf("[PASS@8] %s/%s first_hit=%d recall@8=%.2f\n", category, tc.Name, result.FirstHitRank, result.RecallAt8)
 		} else if result.FirstHitRank > 0 {
-			fmt.Printf("[MISS@5] %s/%s first_hit=%d expected=%s\n", category, tc.Name, result.FirstHitRank, formatRelevant(tc.Relevant))
+			fmt.Printf("[MISS@8] %s/%s first_hit=%d expected=%s\n", category, tc.Name, result.FirstHitRank, formatRelevant(tc.Relevant))
 		} else {
-			fmt.Printf("[FAIL] %s/%s no_hit@5 expected=%s\n", category, tc.Name, formatRelevant(tc.Relevant))
+			fmt.Printf("[FAIL] %s/%s no_hit@8 expected=%s\n", category, tc.Name, formatRelevant(tc.Relevant))
 		}
 	}
 	printSummary("Retrieval Eval Summary", summary)
@@ -153,25 +153,25 @@ func addResult(summary *evalSummary, result caseResult) {
 	if result.HitAt3 {
 		summary.HitAt3++
 	}
-	if result.HitAt5 {
-		summary.HitAt5++
+	if result.HitAt8 {
+		summary.HitAt8++
 	}
-	summary.RecallAt5 += result.RecallAt5
+	summary.RecallAt8 += result.RecallAt8
 	summary.Reciprocal += result.ReciprocalRank
 }
 
 type caseResult struct {
 	HitAt1         bool
 	HitAt3         bool
-	HitAt5         bool
-	RecallAt5      float64
+	HitAt8         bool
+	RecallAt8      float64
 	ReciprocalRank float64
 	FirstHitRank   int
 }
 
 func evaluateCase(tc evalCase, citations []service.Citation) caseResult {
 	firstHit := firstHitRank(citations, tc.Relevant)
-	matched := matchedRelevantCount(limitCitations(citations, 5), tc.Relevant)
+	matched := matchedRelevantCount(limitCitations(citations, 8), tc.Relevant)
 	recall := 0.0
 	if len(tc.Relevant) > 0 {
 		recall = float64(matched) / float64(len(tc.Relevant))
@@ -183,8 +183,8 @@ func evaluateCase(tc evalCase, citations []service.Citation) caseResult {
 	return caseResult{
 		HitAt1:         firstHit > 0 && firstHit <= 1,
 		HitAt3:         firstHit > 0 && firstHit <= 3,
-		HitAt5:         firstHit > 0 && firstHit <= 5,
-		RecallAt5:      recall,
+		HitAt8:         firstHit > 0 && firstHit <= 8,
+		RecallAt8:      recall,
 		ReciprocalRank: reciprocal,
 		FirstHitRank:   firstHit,
 	}
@@ -252,8 +252,8 @@ func printSummary(title string, summary evalSummary) {
 	fmt.Printf("cases: %d errors: %d\n", summary.Total, summary.Errors)
 	fmt.Printf("HitRate@1: %.1f%% (%d/%d)\n", percent(summary.HitAt1, total), summary.HitAt1, total)
 	fmt.Printf("HitRate@3: %.1f%% (%d/%d)\n", percent(summary.HitAt3, total), summary.HitAt3, total)
-	fmt.Printf("HitRate@5: %.1f%% (%d/%d)\n", percent(summary.HitAt5, total), summary.HitAt5, total)
-	fmt.Printf("Recall@5: %.3f\n", summary.RecallAt5/float64(total))
+	fmt.Printf("HitRate@8: %.1f%% (%d/%d)\n", percent(summary.HitAt8, total), summary.HitAt8, total)
+	fmt.Printf("Recall@8: %.3f\n", summary.RecallAt8/float64(total))
 	fmt.Printf("MRR: %.3f\n", summary.Reciprocal/float64(total))
 }
 
@@ -271,11 +271,11 @@ func printGroupedSummary(groups map[string]*evalSummary) {
 	fmt.Println("Category Summary")
 	for _, category := range categories {
 		summary := groups[category]
-		fmt.Printf("- %s: cases=%d HitRate@5=%.1f%% Recall@5=%.3f MRR=%.3f errors=%d\n",
+		fmt.Printf("- %s: cases=%d HitRate@8=%.1f%% Recall@8=%.3f MRR=%.3f errors=%d\n",
 			category,
 			summary.Total,
-			percent(summary.HitAt5, summary.Total),
-			summary.RecallAt5/float64(summary.Total),
+			percent(summary.HitAt8, summary.Total),
+			summary.RecallAt8/float64(summary.Total),
 			summary.Reciprocal/float64(summary.Total),
 			summary.Errors,
 		)
