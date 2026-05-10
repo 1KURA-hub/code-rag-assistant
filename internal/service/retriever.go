@@ -116,29 +116,37 @@ func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit i
 		rankParts = append(rankParts, "ts_rank(search_vector, plainto_tsquery('simple', ?))")
 		rankArgs = append(rankArgs, term)
 	}
-	addLike := func(field string, term string) {
+	addLike := func(field string, term string, boost float64) {
 		pattern := "%" + strings.ToLower(term) + "%"
 		clauses = append(clauses, fmt.Sprintf("lower(%s) LIKE ?", field))
 		whereArgs = append(whereArgs, pattern)
+		if boost > 0 {
+			rankParts = append(rankParts, fmt.Sprintf("CASE WHEN lower(%s) LIKE ? THEN %.2f ELSE 0 END", field, boost))
+			rankArgs = append(rankArgs, pattern)
+		}
 	}
 	for _, path := range features.Paths {
-		addLike("file_path", path)
+		addLike("file_path", path, 2.0)
 	}
 	for _, symbol := range features.Symbols {
-		addLike("symbol_name", symbol)
+		addLike("symbol_name", symbol, 2.5)
 	}
 	for _, symbolType := range features.SymbolTypes {
 		clauses = append(clauses, "lower(symbol_type) = ?")
 		whereArgs = append(whereArgs, strings.ToLower(symbolType))
+		rankParts = append(rankParts, "CASE WHEN lower(symbol_type) = ? THEN 0.40 ELSE 0 END")
+		rankArgs = append(rankArgs, strings.ToLower(symbolType))
 	}
 	for _, term := range terms {
-		addLike("file_path", term)
-		addLike("symbol_name", term)
+		addLike("file_path", term, 0.8)
+		addLike("symbol_name", term, 0.8)
 		addFullText(term)
 	}
 	for _, language := range features.Languages {
 		clauses = append(clauses, "lower(language) = ?")
 		whereArgs = append(whereArgs, strings.ToLower(language))
+		rankParts = append(rankParts, "CASE WHEN lower(language) = ? THEN 0.40 ELSE 0 END")
+		rankArgs = append(rankArgs, strings.ToLower(language))
 	}
 	scoreSQL := "0.45"
 	if len(rankParts) > 0 {
