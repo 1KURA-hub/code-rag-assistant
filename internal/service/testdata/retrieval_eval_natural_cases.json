@@ -200,5 +200,189 @@
       {"file_path": "mq/relay.go", "symbol_name": "StartRelay"},
       {"file_path": "mq/consumer.go", "symbol_name": "Consumer"}
     ]
+  },
+  {
+    "category": "user_auth",
+    "name": "student_register_flow",
+    "question": "学生注册时请求参数会经过哪些代码写入数据库？",
+    "relevant": [
+      {"file_path": "api/user.go", "symbol_name": "Register"},
+      {"file_path": "service/student.go", "symbol_name": "Register"},
+      {"file_path": "repository/mysql/student.go", "symbol_name": "CreateStu"}
+    ]
+  },
+  {
+    "category": "user_auth",
+    "name": "student_login_flow",
+    "question": "学生登录时系统怎么校验密码并返回登录结果？",
+    "relevant": [
+      {"file_path": "api/user.go", "symbol_name": "Login"},
+      {"file_path": "service/student.go", "symbol_name": "Login"},
+      {"file_path": "repository/mysql/student.go", "symbol_name": "GetBySid"}
+    ]
+  },
+  {
+    "category": "user_auth",
+    "name": "jwt_user_context",
+    "question": "后续接口是怎么从登录凭证里拿到当前学生 ID 的？",
+    "relevant": [
+      {"file_path": "middleware/auth.go", "symbol_name": "AuthMiddleware"},
+      {"file_path": "api/select.go", "symbol_name": "SelectCourse"}
+    ]
+  },
+  {
+    "category": "course_query",
+    "name": "course_list_flow",
+    "question": "课程列表接口是怎么从数据库读取课程数据的？",
+    "relevant": [
+      {"file_path": "api/course.go", "symbol_name": "GetCourseList"},
+      {"file_path": "service/course.go", "symbol_name": "GetCourseList"},
+      {"file_path": "repository/mysql/course.go", "symbol_name": "GetCourseList"}
+    ]
+  },
+  {
+    "category": "course_query",
+    "name": "course_detail_flow",
+    "question": "查询某一门课程详情时，缓存未命中后会怎么回源数据库？",
+    "relevant": [
+      {"file_path": "api/course.go", "symbol_name": "GetCourseById"},
+      {"file_path": "service/course.go", "symbol_name": "GetCourseById"},
+      {"file_path": "repository/mysql/course.go", "symbol_name": "GetCourseById"}
+    ]
+  },
+  {
+    "category": "cache_query",
+    "name": "bloom_filter_init",
+    "question": "课程布隆过滤器启动时是怎么预热真实课程 ID 的？",
+    "relevant": [
+      {"file_path": "initialize/bloomfilter.go", "symbol_name": "InitBloomFilter"},
+      {"file_path": "middleware/bloomfilter.go", "symbol_name": "Bloomfilter"}
+    ]
+  },
+  {
+    "category": "mq_topology",
+    "name": "rabbitmq_topology",
+    "question": "RabbitMQ 的主队列、重试队列和死信队列是在哪里声明和绑定的？",
+    "relevant": [
+      {"file_path": "initialize/rabbitmq.go", "symbol_name": "InitRabbitMQ"},
+      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareCourseSelectTopology"},
+      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareAndBindQueue"}
+    ]
+  },
+  {
+    "category": "mq_topology",
+    "name": "publisher_confirm_flow",
+    "question": "发布选课消息时，代码怎么确认 RabbitMQ 已经收到消息？",
+    "relevant": [
+      {"file_path": "mq/publisher.go", "symbol_name": "SendWithContext"},
+      {"file_path": "mq/publisher.go", "symbol_name": "PublishWithConfirm"}
+    ]
+  },
+  {
+    "category": "mq_topology",
+    "name": "retry_headers",
+    "question": "失败消息的重试次数和失败原因是怎么保存在消息里的？",
+    "relevant": [
+      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
+      {"file_path": "mq/consumer.go", "symbol_name": "copyHeaders"},
+      {"file_path": "mq/consumer.go", "symbol_name": "getRetryCount"}
+    ]
+  },
+  {
+    "category": "mq_topology",
+    "name": "bad_message_to_dlq",
+    "question": "如果队列里的消息体格式坏了，系统会怎么处理这条消息？",
+    "relevant": [
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "mq/consumer.go", "symbol_name": "publishToDLQAndAck"}
+    ]
+  },
+  {
+    "category": "stream_relay",
+    "name": "stream_trim_policy",
+    "question": "Redis Stream 消息表会不会一直增长，代码里怎么裁剪？",
+    "relevant": [
+      {"file_path": "mq/relay.go", "symbol_name": "trimSelectStream"}
+    ]
+  },
+  {
+    "category": "stream_relay",
+    "name": "stream_consumer_name",
+    "question": "Redis Stream relay 的消费者名称是怎么生成的？",
+    "relevant": [
+      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"}
+    ]
+  },
+  {
+    "category": "stream_relay",
+    "name": "stream_group_create",
+    "question": "Redis Stream 消费组不存在时，代码是怎么创建消费组的？",
+    "relevant": [
+      {"file_path": "mq/relay.go", "symbol_name": "ensureRelayGroup"}
+    ]
+  },
+  {
+    "category": "request_status",
+    "name": "request_status_key",
+    "question": "选课请求的 pending success failed 状态存在 Redis 的哪个 key 里？",
+    "relevant": [
+      {"file_path": "repository/redis/keys.go", "symbol_name": "RequestKey"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "GetSelectionRequestStatus"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestSuccess"}
+    ]
+  },
+  {
+    "category": "request_status",
+    "name": "result_fallback_mysql",
+    "question": "查询选课结果时，如果 Redis 状态不存在，为什么还要查 MySQL？",
+    "relevant": [
+      {"file_path": "service/query_result.go", "symbol_name": "QuerySelectResult"},
+      {"file_path": "repository/mysql/selection.go", "symbol_name": "GetSelectionBySIDAndCID"}
+    ]
+  },
+  {
+    "category": "idempotency",
+    "name": "selection_unique_index",
+    "question": "数据库层面怎么限制同一个学生不能重复选择同一门课？",
+    "relevant": [
+      {"file_path": "model/selection.go", "symbol_name": "Selection"}
+    ]
+  },
+  {
+    "category": "selection_record",
+    "name": "selection_status_text",
+    "question": "查询选课记录列表时，选课状态数字是怎么转换成文字的？",
+    "relevant": [
+      {"file_path": "repository/mysql/selection.go", "symbol_name": "SelectionStatusText"},
+      {"file_path": "repository/mysql/selection.go", "symbol_name": "ListSelectionsByStudentID"}
+    ]
+  },
+  {
+    "category": "compensation",
+    "name": "dlq_compensate_existing_record",
+    "question": "死信补偿时，如果这条选课记录其实已经落库了，会怎么处理？",
+    "relevant": [
+      {"file_path": "cmd/compensate-dlq/main.go", "symbol_name": "compensateOne"},
+      {"file_path": "service/compensate.go", "symbol_name": "CompensateRecord"}
+    ]
+  },
+  {
+    "category": "selection_record",
+    "name": "create_record_transaction",
+    "question": "真正创建选课记录时，MySQL 事务里做了哪些写操作？",
+    "relevant": [
+      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+    ]
+  },
+  {
+    "category": "startup",
+    "name": "startup_init_order",
+    "question": "服务启动时 MySQL、Redis、布隆过滤器、RabbitMQ 和后台协程是怎么初始化的？",
+    "relevant": [
+      {"file_path": "cmd/server/main.go", "symbol_name": "main"},
+      {"file_path": "initialize/mysql.go", "symbol_name": "InitMySQL"},
+      {"file_path": "initialize/redis.go", "symbol_name": "InitRedis"},
+      {"file_path": "initialize/rabbitmq.go", "symbol_name": "InitRabbitMQ"}
+    ]
   }
 ]
