@@ -13,11 +13,15 @@ type QueryPlan struct {
 	Original      string
 	EmbeddingText string
 	Features      searchFeatures
+	RewriteUsed   bool
+	RewriteError  string
 }
 
 type QueryPlanSnapshot struct {
 	Original      string   `json:"original"`
 	EmbeddingText string   `json:"embedding_text"`
+	RewriteUsed   bool     `json:"rewrite_used"`
+	RewriteError  string   `json:"rewrite_error"`
 	Terms         []string `json:"terms"`
 	Paths         []string `json:"paths"`
 	Symbols       []string `json:"symbols"`
@@ -52,9 +56,11 @@ func BuildQueryPlan(ctx context.Context, cfg config.Config, query string, hints 
 
 	modelPlan, err := callModelQueryPlan(rewriteCtx, cfg, query, hints)
 	if err != nil {
+		plan.RewriteError = err.Error()
 		return plan
 	}
 	mergeModelQueryPlan(&plan, modelPlan, cfg.QueryRewriteMaxTerms)
+	plan.RewriteUsed = true
 	return plan
 }
 
@@ -63,6 +69,8 @@ func BuildQueryPlanSnapshot(ctx context.Context, cfg config.Config, query string
 	return QueryPlanSnapshot{
 		Original:      plan.Original,
 		EmbeddingText: plan.EmbeddingText,
+		RewriteUsed:   plan.RewriteUsed,
+		RewriteError:  plan.RewriteError,
 		Terms:         append([]string{}, plan.Features.Terms...),
 		Paths:         append([]string{}, plan.Features.Paths...),
 		Symbols:       append([]string{}, plan.Features.Symbols...),

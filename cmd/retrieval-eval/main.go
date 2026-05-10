@@ -95,6 +95,7 @@ func printDebug(ctx context.Context, cfg config.Config, tc evalCase, citations [
 	plan := service.BuildQueryPlanSnapshot(ctx, cfg, tc.Question, tc.Hints)
 	fmt.Printf("\n[DEBUG] %s/%s\n", evalCategory(tc), tc.Name)
 	fmt.Printf("question: %s\n", tc.Question)
+	fmt.Printf("rewrite_used=%v rewrite_error=%s\n", plan.RewriteUsed, plan.RewriteError)
 	fmt.Printf("embedding_text: %s\n", compact(plan.EmbeddingText, 360))
 	fmt.Printf("terms=%v\npaths=%v\nsymbols=%v\nsymbol_types=%v\nlanguages=%v\n",
 		plan.Terms, plan.Paths, plan.Symbols, plan.SymbolTypes, plan.Languages)
