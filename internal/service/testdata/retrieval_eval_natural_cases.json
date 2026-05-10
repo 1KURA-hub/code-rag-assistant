@@ -1,0 +1,204 @@
+[
+  {
+    "category": "async_consistency",
+    "name": "success_response_before_mysql_record",
+    "question": "为什么接口返回成功了，但是数据库里可能还没有选课记录？",
+    "relevant": [
+      {"file_path": "api/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"},
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+    ]
+  },
+  {
+    "category": "async_consistency",
+    "name": "recover_after_crash_before_db_write",
+    "question": "如果服务在扣完库存后突然挂了，这条请求怎么恢复？",
+    "relevant": [
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "mq/relay.go", "symbol_name": "relayNewMessages"},
+      {"file_path": "mq/relay.go", "symbol_name": "reclaimPendingMessages"},
+      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"}
+    ]
+  },
+  {
+    "category": "async_consistency",
+    "name": "mq_publish_confirm_before_ack_stream",
+    "question": "预扣成功的消息什么时候才会从临时消息表里确认删除？",
+    "relevant": [
+      {"file_path": "mq/relay.go", "symbol_name": "handleStreamMessage"},
+      {"file_path": "mq/publisher.go", "symbol_name": "SendWithContext"},
+      {"file_path": "mq/publisher.go", "symbol_name": "PublishWithConfirm"}
+    ]
+  },
+  {
+    "category": "async_consistency",
+    "name": "pending_stream_message_reclaimed",
+    "question": "后台转发任务重启后，之前没处理完的消息会怎么重新处理？",
+    "relevant": [
+      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"},
+      {"file_path": "mq/relay.go", "symbol_name": "ensureRelayGroup"},
+      {"file_path": "mq/relay.go", "symbol_name": "reclaimPendingMessages"}
+    ]
+  },
+  {
+    "category": "async_consistency",
+    "name": "db_write_failure_retry",
+    "question": "消息已经进入队列后，写数据库失败会怎么处理？",
+    "relevant": [
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
+      {"file_path": "mq/consumer.go", "symbol_name": "retryRoutingKey"},
+      {"file_path": "initialize/rabbitmq.go", "symbol_name": "declareCourseSelectTopology"}
+    ]
+  },
+  {
+    "category": "async_consistency",
+    "name": "dead_letter_compensation",
+    "question": "多次处理失败的选课请求最后怎么兜底修复？",
+    "relevant": [
+      {"file_path": "mq/consumer.go", "symbol_name": "handleRetryOrDLQ"},
+      {"file_path": "mq/consumer.go", "symbol_name": "publishToDLQAndAck"},
+      {"file_path": "cmd/compensate-dlq/main.go", "symbol_name": "main"}
+    ]
+  },
+  {
+    "category": "idempotency",
+    "name": "duplicate_click_select",
+    "question": "用户连续点两次选课按钮，系统怎么避免重复处理？",
+    "relevant": [
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "repository/redis/keys.go", "symbol_name": "RequestKey"},
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"}
+    ]
+  },
+  {
+    "category": "idempotency",
+    "name": "duplicate_mq_delivery",
+    "question": "队列重复投递同一条选课消息时，怎么保证不会重复落库？",
+    "relevant": [
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"},
+      {"file_path": "model/selection.go", "symbol_name": "Selection"}
+    ]
+  },
+  {
+    "category": "idempotency",
+    "name": "repeat_after_drop_course",
+    "question": "学生退课后再次选择同一门课，旧记录是怎么处理的？",
+    "relevant": [
+      {"file_path": "service/drop_course.go", "symbol_name": "DropCourse"},
+      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"},
+      {"file_path": "model/selection.go", "symbol_name": "Selection"}
+    ]
+  },
+  {
+    "category": "api_flow",
+    "name": "poll_selection_result",
+    "question": "前端发起选课后，为什么还要继续查询结果接口？",
+    "relevant": [
+      {"file_path": "api/select.go", "symbol_name": "SelectResult"},
+      {"file_path": "service/query_result.go", "symbol_name": "QuerySelectResult"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "GetSelectionRequestStatus"}
+    ]
+  },
+  {
+    "category": "api_flow",
+    "name": "selection_status_transition",
+    "question": "排队中的选课请求最后是怎么变成成功或者失败状态的？",
+    "relevant": [
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestSuccess"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "MarkSelectionRequestFailed"}
+    ]
+  },
+  {
+    "category": "api_flow",
+    "name": "select_api_validation",
+    "question": "选课接口收到请求后，怎么知道是哪个学生和哪门课？",
+    "relevant": [
+      {"file_path": "api/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "router/router.go", "symbol_name": "InitRouter"}
+    ]
+  },
+  {
+    "category": "api_flow",
+    "name": "list_selected_courses",
+    "question": "用户在哪里能查到自己已经选择了哪些课程？",
+    "relevant": [
+      {"file_path": "api/select.go", "symbol_name": "ListSelections"},
+      {"file_path": "service/selection_list.go", "symbol_name": "ListStudentSelections"},
+      {"file_path": "repository/mysql/selection.go", "symbol_name": "ListSelectionsByStudentID"}
+    ]
+  },
+  {
+    "category": "stock",
+    "name": "fast_fail_when_stock_empty",
+    "question": "库存不够时，为什么不用访问数据库也能很快返回？",
+    "relevant": [
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "initialize/redis.go", "symbol_name": "InitRedis"},
+      {"file_path": "initialize/redis.go", "symbol_name": "LoadStockToRedis"}
+    ]
+  },
+  {
+    "category": "stock",
+    "name": "mysql_stock_final_write",
+    "question": "Redis 扣了库存以后，数据库里的课程库存什么时候真正减少？",
+    "relevant": [
+      {"file_path": "service/select.go", "symbol_name": "SelectCourse"},
+      {"file_path": "mq/consumer.go", "symbol_name": "processSingleMessage"},
+      {"file_path": "service/createrecord.go", "symbol_name": "CreateRecord"}
+    ]
+  },
+  {
+    "category": "stock",
+    "name": "drop_course_restore_stock",
+    "question": "退课时课程名额和用户选课状态是怎么恢复的？",
+    "relevant": [
+      {"file_path": "api/select.go", "symbol_name": "DropCourse"},
+      {"file_path": "service/drop_course.go", "symbol_name": "DropCourse"},
+      {"file_path": "repository/redis/result_state.go", "symbol_name": "DeleteSelectionRequestStatus"}
+    ]
+  },
+  {
+    "category": "cache_query",
+    "name": "hot_course_query",
+    "question": "很多人同时查看同一门课程时，怎么减少数据库压力？",
+    "relevant": [
+      {"file_path": "api/course.go", "symbol_name": "GetCourseById"},
+      {"file_path": "service/course.go", "symbol_name": "GetCourseById"},
+      {"file_path": "service/course.go", "symbol_name": "sf"}
+    ]
+  },
+  {
+    "category": "cache_query",
+    "name": "invalid_course_query",
+    "question": "有人一直查不存在的课程，系统怎么挡住这种请求？",
+    "relevant": [
+      {"file_path": "middleware/bloomfilter.go", "symbol_name": "Bloomfilter"},
+      {"file_path": "initialize/bloomfilter.go", "symbol_name": "InitBloomFilter"},
+      {"file_path": "service/course.go", "symbol_name": "GetCourseById"}
+    ]
+  },
+  {
+    "category": "cache_query",
+    "name": "empty_cache_for_missing_course",
+    "question": "课程不存在时，为什么后面再查同一个课程不会一直打到数据库？",
+    "relevant": [
+      {"file_path": "service/course.go", "symbol_name": "GetCourseById"}
+    ]
+  },
+  {
+    "category": "startup",
+    "name": "service_start_background_workers",
+    "question": "服务启动后，哪些后台任务会自动开始处理选课消息？",
+    "relevant": [
+      {"file_path": "cmd/server/main.go", "symbol_name": "main"},
+      {"file_path": "mq/relay.go", "symbol_name": "StartRelay"},
+      {"file_path": "mq/consumer.go", "symbol_name": "Consumer"}
+    ]
+  }
+]
