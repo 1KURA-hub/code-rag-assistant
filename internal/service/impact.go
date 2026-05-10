@@ -67,8 +67,8 @@ func localImpact(diffText string, citations []Citation) *ImpactResponse {
 	if len(modules) == 0 && len(unmatchedPaths) == 0 {
 		modules = uniquePaths(citations, 5)
 	}
-	risks := inferRisks(matchedPaths, matchedCitations)
-	tests := inferTests(matchedPaths, matchedCitations)
+	risks := inferRisks(diffText, matchedPaths, matchedCitations)
+	tests := inferTests(diffText, matchedPaths, matchedCitations)
 	summary := buildImpactSummary(changedPaths, matchedPaths, unmatchedPaths, citations)
 	if strings.TrimSpace(diffText) == "" {
 		summary = "没有提供 diff 内容。"
@@ -108,7 +108,7 @@ func buildImpactSummary(changedPaths, matchedPaths, unmatchedPaths []string, cit
 	return b.String()
 }
 
-func inferRisks(matchedPaths []string, citations []Citation) []string {
+func inferRisks(diffText string, matchedPaths []string, citations []Citation) []string {
 	seen := map[string]bool{}
 	var risks []string
 	add := func(value string) {
@@ -121,6 +121,16 @@ func inferRisks(matchedPaths []string, citations []Citation) []string {
 		add("当前 diff 文件未命中当前仓库的代码依据，需要先确认变更是否属于当前索引仓库。")
 		return risks
 	}
+	evidence := impactEvidenceText(diffText, matchedPaths, citations)
+	switch {
+	case hasAny(evidence, "retriever", "search", "vector", "embedding", "pgvector", "keyword", "rrf", "topk", "citation"):
+		add("检索召回链路可能受影响，需要关注向量召回、关键词召回、RRF 融合和 TopK 截断是否仍符合预期。")
+		if hasAny(evidence, "return", "keywordsearch", "fusecitationsrrf") {
+			add("新增提前返回可能绕过融合排序逻辑，需要确认 fallback 结果的排序、去重和数量限制。")
+		}
+	case hasAny(evidence, "prompt", "llm", "answer", "impact"):
+		add("模型生成链路可能受影响，需要关注 prompt 上下文、代码依据引用和无证据回答控制。")
+	}
 	for _, path := range append(matchedPaths, uniquePaths(citations, 8)...) {
 		lower := strings.ToLower(path)
 		switch {
@@ -129,7 +139,7 @@ func inferRisks(matchedPaths []string, citations []Citation) []string {
 		case strings.Contains(lower, "redis") || strings.Contains(lower, "cache") || strings.Contains(lower, "stream"):
 			add("缓存或 Redis 相关逻辑可能受影响，需要关注缓存一致性、过期时间、重复请求和并发更新。")
 		case strings.Contains(lower, "service"):
-			add("核心服务逻辑可能受影响，需要关注调用链、错误处理、边界条件和事务一致性。")
+			add("核心服务逻辑可能受影响，需要关注调用链、错误处理、空结果和边界参数。")
 		case strings.Contains(lower, "api") || strings.Contains(lower, "router") || strings.Contains(lower, "handler") || strings.Contains(lower, "middleware"):
 			add("接口入口或中间件行为可能受影响，需要关注鉴权、参数校验和错误返回。")
 		case strings.Contains(lower, "model") || strings.Contains(lower, "repository"):
@@ -144,7 +154,7 @@ func inferRisks(matchedPaths []string, citations []Citation) []string {
 	return risks
 }
 
-func inferTests(matchedPaths []string, citations []Citation) []string {
+func inferTests(diffText string, matchedPaths []string, citations []Citation) []string {
 	seen := map[string]bool{}
 	var tests []string
 	add := func(value string) {
@@ -157,6 +167,16 @@ func inferTests(matchedPaths []string, citations []Citation) []string {
 		add("先确认 diff 是否属于当前仓库；确认后再补充变更文件对应的单元测试或接口回归测试。")
 		return tests
 	}
+	evidence := impactEvidenceText(diffText, matchedPaths, citations)
+	switch {
+	case hasAny(evidence, "retriever", "search", "vector", "embedding", "pgvector", "keyword", "rrf", "topk", "citation"):
+		add("补充向量召回为空、关键词召回非空、混合召回融合和 TopK 截断场景测试。")
+		if hasAny(evidence, "return", "keywordsearch", "fusecitationsrrf") {
+			add("补充 keywordSearch fallback 场景，验证返回结果不会绕过必要的去重和数量限制。")
+		}
+	case hasAny(evidence, "prompt", "llm", "answer", "impact"):
+		add("补充模型调用失败、本地 fallback、无代码依据和有代码依据的回答生成测试。")
+	}
 	for _, path := range append(matchedPaths, uniquePaths(citations, 8)...) {
 		lower := strings.ToLower(path)
 		switch {
@@ -165,7 +185,7 @@ func inferTests(matchedPaths []string, citations []Citation) []string {
 		case strings.Contains(lower, "redis") || strings.Contains(lower, "cache") || strings.Contains(lower, "stream"):
 			add("补充缓存命中、缓存失效、并发更新、重复请求和 Redis 异常场景测试。")
 		case strings.Contains(lower, "service"):
-			add("补充核心服务成功路径、异常路径、边界参数和事务一致性测试。")
+			add("补充核心服务成功路径、异常路径、空结果和边界参数测试。")
 		case strings.Contains(lower, "api") || strings.Contains(lower, "router") || strings.Contains(lower, "handler") || strings.Contains(lower, "middleware"):
 			add("补充接口参数校验、未授权访问、正常响应和错误响应测试。")
 		case strings.Contains(lower, "model") || strings.Contains(lower, "repository"):
@@ -176,6 +196,35 @@ func inferTests(matchedPaths []string, citations []Citation) []string {
 		add("至少补充变更文件的单元测试，并执行相关 API 或集成链路回归。")
 	}
 	return tests
+}
+
+func impactEvidenceText(diffText string, paths []string, citations []Citation) string {
+	var b strings.Builder
+	b.WriteString(diffText)
+	for _, path := range paths {
+		b.WriteByte('\n')
+		b.WriteString(path)
+	}
+	for _, citation := range citations {
+		b.WriteByte('\n')
+		b.WriteString(citation.FilePath)
+		b.WriteByte('\n')
+		b.WriteString(citation.SymbolName)
+		b.WriteByte('\n')
+		b.WriteString(citation.SymbolType)
+		b.WriteByte('\n')
+		b.WriteString(citation.Content)
+	}
+	return strings.ToLower(b.String())
+}
+
+func hasAny(text string, terms ...string) bool {
+	for _, term := range terms {
+		if strings.Contains(text, term) {
+			return true
+		}
+	}
+	return false
 }
 
 func matchDiffPaths(changedPaths []string, citations []Citation) ([]string, []string) {
@@ -262,7 +311,7 @@ func uniquePaths(citations []Citation, limit int) []string {
 }
 
 func impactSystemPrompt() string {
-	return "你是一名后端代码审查讲解助手。必须使用中文回答。语言要简单、直接，不要写长篇 Markdown，不要使用大量加粗、标题、分割线或项目符号。只能依据 diff 和提供的代码片段分析，不要编造不存在的调用链。回答格式固定为四段：这次变更大概影响什么；可能的风险；建议怎么测试；代码依据。"
+	return "你是一名软件工程代码审查助手，擅长分析后端、前端、数据库、部署配置和测试代码的变更影响。必须使用中文回答。你只能依据用户提供的 diff 和检索到的代码片段进行分析，不能猜测没有证据的模块。请重点分析这次变更是否改变了调用链、状态流转、错误处理、数据读写、外部依赖、接口行为、构建部署或用户交互。回答控制在 600 字以内，结构为：变更总结、影响范围、风险点、建议测试、代码依据。每个风险点必须绑定一个具体文件、函数、字段、配置项或调用，并说明依据来自 diff 还是代码片段。如果没有足够代码依据，请降低结论强度；如果 diff 文件没有在当前仓库命中，要明确说明可信度较低。语言要自然，不要堆砌术语，不要输出泛化风险。"
 }
 
 func impactUserPrompt(diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string {
@@ -292,6 +341,6 @@ func impactUserPrompt(diffText string, citations []Citation, matchedPaths, unmat
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
-	b.WriteString("\n请用中文输出。不要使用复杂 Markdown。每段尽量短，用简单语言说明。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。")
+	b.WriteString("\n请用中文输出。不要使用复杂 Markdown。每段尽量短，用简单语言说明。风险和测试建议必须对应 diff 或引用代码里的具体函数、文件、字段或调用。不要把所有 service 文件都泛化成事务一致性问题。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。")
 	return b.String()
 }

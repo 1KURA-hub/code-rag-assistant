@@ -67,6 +67,38 @@ func TestLocalImpactUsesMatchedDiffPath(t *testing.T) {
 	}
 }
 
+func TestLocalImpactUsesRetrievalSpecificSuggestions(t *testing.T) {
+	diff := `diff --git a/internal/service/retriever.go b/internal/service/retriever.go
++++ b/internal/service/retriever.go
++	if len(vectorResults) == 0 {
++		return r.keywordSearch(ctx, repositoryID, hints)
++	}
++	return fuseCitationsRRF(vectorResults, keywordResults, r.cfg.TopK), nil`
+	citations := []Citation{
+		{
+			FilePath:   "internal/service/retriever.go",
+			StartLine:  35,
+			EndLine:    80,
+			SymbolName: "Search",
+			SymbolType: "function",
+			Content:    "func (r *Retriever) Search() { vectorSearch(); keywordSearch(); fuseCitationsRRF() }",
+			Score:      0.92,
+		},
+	}
+
+	resp := localImpact(diff, citations)
+
+	if !containsJoined(resp.Risks, "RRF") {
+		t.Fatalf("risks = %v, want retrieval-specific RRF risk", resp.Risks)
+	}
+	if !containsJoined(resp.SuggestedTests, "TopK") {
+		t.Fatalf("tests = %v, want TopK retrieval test", resp.SuggestedTests)
+	}
+	if containsJoined(resp.Risks, "事务一致性") || containsJoined(resp.SuggestedTests, "事务一致性") {
+		t.Fatalf("impact suggestions should not mention unrelated transactions: risks=%v tests=%v", resp.Risks, resp.SuggestedTests)
+	}
+}
+
 func assertNoCourseSpecificText(t *testing.T, values []string) {
 	t.Helper()
 	joined := strings.Join(values, "\n")
@@ -75,4 +107,8 @@ func assertNoCourseSpecificText(t *testing.T, values []string) {
 			t.Fatalf("values contain course-specific text %q: %v", forbidden, values)
 		}
 	}
+}
+
+func containsJoined(values []string, target string) bool {
+	return strings.Contains(strings.Join(values, "\n"), target)
 }
