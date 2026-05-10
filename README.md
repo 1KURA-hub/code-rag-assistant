@@ -220,7 +220,7 @@ export OPENAI_MODEL="gpt-4o-mini"
 export EMBEDDING_MODEL="text-embedding-3-small"
 export EMBEDDING_PROVIDER="remote"
 export EMBEDDING_BATCH_SIZE="10"
-export PROMPT_CITATION_LIMIT="4"
+export PROMPT_CITATION_LIMIT="5"
 export PROMPT_CHUNK_MAX_CHARS="1200"
 export GITHUB_PROXY_URL=""
 ```

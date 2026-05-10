@@ -100,7 +100,7 @@ func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citati
 func promptCitations(cfg config.Config, citations []Citation) []Citation {
 	limit := cfg.PromptCitationLimit
 	if limit <= 0 {
-		limit = 4
+		limit = 5
 	}
 	if len(citations) < limit {
 		limit = len(citations)

@@ -49,7 +49,7 @@ func Load() Config {
 		ChunkMaxLines:       getenvInt("CHUNK_MAX_LINES", 80),
 		ChunkOverlapLines:   getenvInt("CHUNK_OVERLAP_LINES", 12),
 		TopK:                getenvInt("TOP_K", 8),
-		PromptCitationLimit: getenvInt("PROMPT_CITATION_LIMIT", 4),
+		PromptCitationLimit: getenvInt("PROMPT_CITATION_LIMIT", 5),
 		PromptChunkMaxChars: getenvInt("PROMPT_CHUNK_MAX_CHARS", 1200),
 		MaxRepoBytes:        int64(getenvInt("MAX_REPO_MB", 30)) * 1024 * 1024,
 		GitHubTimeout:       time.Duration(getenvInt("GITHUB_TIMEOUT_SECONDS", 30)) * time.Second,
