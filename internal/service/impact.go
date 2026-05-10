@@ -42,7 +42,7 @@ func (s *ImpactService) Analyze(ctx context.Context, repositoryID uint, diffText
 		return nil, err
 	}
 	resp := localImpact(diffText, citations)
-	if generated, err := callLLM(ctx, s.cfg, impactSystemPrompt(), impactUserPrompt(diffText, citations, resp.MatchedPaths, resp.UnmatchedPaths)); err == nil {
+	if generated, err := callLLM(ctx, s.cfg, impactSystemPrompt(), impactUserPrompt(s.cfg, diffText, citations, resp.MatchedPaths, resp.UnmatchedPaths)); err == nil {
 		resp.Summary = generated
 		resp.Risks = nil
 		resp.SuggestedTests = nil
@@ -316,7 +316,7 @@ func impactSystemPrompt() string {
 	return "你是一名软件工程代码审查助手，擅长分析后端、前端、数据库、部署配置和测试代码的变更影响。必须使用中文回答。你只能依据用户提供的 diff 和检索到的代码片段进行分析，不能猜测没有证据的模块。请重点分析这次变更是否改变了调用链、状态流转、错误处理、数据读写、外部依赖、接口行为、构建部署或用户交互。回答控制在 800 字以内，说明变更总结、影响范围、风险点、建议测试和代码依据。每个风险点必须绑定一个具体文件、函数、字段、配置项或调用，并说明依据来自 diff 还是代码片段。如果没有足够代码依据，请降低结论强度；如果 diff 文件没有在当前仓库命中，要明确说明可信度较低。回答要像真实代码审查意见，自然、清楚、中等详细。允许使用少量 Markdown 标题和加粗来突出重点，但不要使用反引号包裹文件名、函数名、字段名或接口路径。不要输出复杂表格或大段代码块。"
 }
 
-func impactUserPrompt(diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string {
+func impactUserPrompt(cfg config.Config, diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string {
 	var b strings.Builder
 	b.WriteString("代码变更 diff：\n")
 	b.WriteString(diffText)
@@ -334,7 +334,7 @@ func impactUserPrompt(diffText string, citations []Citation, matchedPaths, unmat
 		}
 	}
 	b.WriteString("\n\n相关代码片段：\n")
-	for i, c := range promptCitations(citations) {
+	for i, c := range promptCitations(cfg, citations) {
 		b.WriteString(fmt.Sprintf("\n[%d] %s:%d-%d", i+1, c.FilePath, c.StartLine, c.EndLine))
 		if c.SymbolName != "" {
 			b.WriteString(fmt.Sprintf(" 符号=%s 类型=%s", c.SymbolName, c.SymbolType))

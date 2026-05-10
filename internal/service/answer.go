@@ -39,7 +39,7 @@ func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question str
 		return &AskResponse{Answer: "没有检索到相关代码片段。", Citations: citations}, nil
 	}
 	answer := s.localAnswer(question, citations)
-	if generated, err := callLLM(ctx, s.cfg, codeAnswerSystemPrompt(), codeAnswerUserPrompt(question, citations)); err == nil {
+	if generated, err := callLLM(ctx, s.cfg, codeAnswerSystemPrompt(), codeAnswerUserPrompt(s.cfg, question, citations)); err == nil {
 		answer = generated
 	}
 	return &AskResponse{Answer: answer, Citations: citations}, nil
@@ -79,12 +79,12 @@ func codeAnswerSystemPrompt() string {
 	return "你是一名代码仓库 RAG 分析助手，擅长理解后端、前端、数据库、部署配置和测试代码。必须使用中文回答。你只能依据提供的代码片段回答，不能编造不存在的函数、模块、字段或调用链。回答要中等详细，像 GPT 正常解释技术问题一样自然清楚，不要过短。先直接回答用户问题，再解释核心流程、关键设计和代码依据。如果用户问为什么这样设计，请结合代码结构说明设计目的、优点和限制。如果用户问函数逻辑，请按代码顺序说明输入、关键变量、调用关系和返回结果。如果涉及框架、标准库、数据库、中间件、HTTP、Docker、RAG、embedding、向量检索等技术点，请解释它们在当前代码中的具体作用。如果证据不足，请明确说明依据不足，并指出还需要查看哪些文件或函数。允许使用少量 Markdown 标题和加粗来突出重点，例如用二级标题分隔“核心流程”“关键设计”“代码依据”，用加粗强调关键结论。不要使用反引号包裹文件名、函数名、字段名或接口路径。不要输出复杂表格；除非用户要求代码示例，否则不要输出代码块。"
 }
 
-func codeAnswerUserPrompt(question string, citations []Citation) string {
+func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citation) string {
 	var b strings.Builder
 	b.WriteString("用户问题：\n")
 	b.WriteString(question)
 	b.WriteString("\n\n相关代码片段：\n")
-	for i, c := range promptCitations(citations) {
+	for i, c := range promptCitations(cfg, citations) {
 		b.WriteString(fmt.Sprintf("\n[%d] %s:%d-%d", i+1, c.FilePath, c.StartLine, c.EndLine))
 		if c.SymbolName != "" {
 			b.WriteString(fmt.Sprintf(" 符号=%s 类型=%s", c.SymbolName, c.SymbolType))
@@ -97,11 +97,35 @@ func codeAnswerUserPrompt(question string, citations []Citation) string {
 	return b.String()
 }
 
-func promptCitations(citations []Citation) []Citation {
-	if len(citations) > 5 {
-		return citations[:5]
+func promptCitations(cfg config.Config, citations []Citation) []Citation {
+	limit := cfg.PromptCitationLimit
+	if limit <= 0 {
+		limit = 4
 	}
-	return citations
+	if len(citations) < limit {
+		limit = len(citations)
+	}
+	maxChars := cfg.PromptChunkMaxChars
+	if maxChars <= 0 {
+		maxChars = 1200
+	}
+	out := make([]Citation, 0, limit)
+	for _, citation := range citations[:limit] {
+		citation.Content = truncatePromptContent(citation.Content, maxChars)
+		out = append(out, citation)
+	}
+	return out
+}
+
+func truncatePromptContent(content string, maxChars int) string {
+	if maxChars <= 0 {
+		return ""
+	}
+	runes := []rune(content)
+	if len(runes) <= maxChars {
+		return content
+	}
+	return string(runes[:maxChars]) + "\n...（内容已截断）"
 }
 
 var ErrRepositoryNotReady = errors.New("repository is not ready")
