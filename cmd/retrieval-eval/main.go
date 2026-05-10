@@ -81,8 +81,10 @@ func main() {
 			printDebug(ctx, cfg, tc, citations)
 		}
 
-		if result.FirstHitRank > 0 {
-			fmt.Printf("[PASS] %s/%s first_hit=%d recall@5=%.2f\n", category, tc.Name, result.FirstHitRank, result.RecallAt5)
+		if result.HitAt5 {
+			fmt.Printf("[PASS@5] %s/%s first_hit=%d recall@5=%.2f\n", category, tc.Name, result.FirstHitRank, result.RecallAt5)
+		} else if result.FirstHitRank > 0 {
+			fmt.Printf("[MISS@5] %s/%s first_hit=%d expected=%s\n", category, tc.Name, result.FirstHitRank, formatRelevant(tc.Relevant))
 		} else {
 			fmt.Printf("[FAIL] %s/%s no_hit@5 expected=%s\n", category, tc.Name, formatRelevant(tc.Relevant))
 		}
