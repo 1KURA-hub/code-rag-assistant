@@ -425,5 +425,208 @@
     "relevant": [
       {"file_path": "internal/util/zip.go", "symbol_name": "Unzip"}
     ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "user_uploads_repo_url",
+    "question": "用户在页面输入 GitHub 地址以后，后端为什么不是等索引完成再返回？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "CreateAndIndex"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "index"}
+    ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "frontend_polling_status",
+    "question": "前端为什么要一直查仓库状态，后端返回的 ready 是从哪里来的？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "Get"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "updateReady"},
+      {"file_path": "internal/handler/repo.go", "symbol_name": "getRepository"}
+    ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "index_failure_keeps_old_answer",
+    "question": "如果重新导入仓库失败，为什么用户有时候还能继续问旧代码？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "markFailedOrKeepReady"},
+      {"file_path": "internal/model/code_chunk.go", "symbol_name": "CodeChunk"}
+    ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "repo_status_cache_reason",
+    "question": "仓库状态为什么要放 Redis，直接每次查数据库不行吗？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "Get"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "getRepoCache"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "setRepoCache"}
+    ]
+  },
+  {
+    "category": "natural_chunking",
+    "name": "why_ast_not_fixed_lines",
+    "question": "为什么 Go 源码要按函数和类型切，而不是简单每几十行切一段？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "chunkGoFile"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "goNodeChunk"}
+    ]
+  },
+  {
+    "category": "natural_chunking",
+    "name": "citation_line_numbers",
+    "question": "回答里的代码依据为什么能显示文件路径和起止行号？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "goNodeChunk"},
+      {"file_path": "internal/model/code_chunk.go", "symbol_name": "CodeChunk"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "Citation"}
+    ]
+  },
+  {
+    "category": "natural_chunking",
+    "name": "global_values_are_searchable",
+    "question": "如果用户问配置常量或者全局变量，索引时会不会把这些声明也保存下来？",
+    "relevant": [
+      {"file_path": "internal/service/chunker.go", "symbol_name": "valueSpecNames"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "valueSpecSymbolType"},
+      {"file_path": "internal/service/chunker.go", "symbol_name": "chunkGoFile"}
+    ]
+  },
+  {
+    "category": "natural_embedding",
+    "name": "why_batch_embedding",
+    "question": "为什么索引阶段要批量生成向量，这样比一条一条请求模型有什么好处？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "EmbedBatch"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "embedRemoteBatch"}
+    ]
+  },
+  {
+    "category": "natural_embedding",
+    "name": "vector_written_to_database",
+    "question": "源码片段被模型转成向量后，是怎么和原代码一起写进数据库的？",
+    "relevant": [
+      {"file_path": "internal/service/indexer.go", "symbol_name": "IndexRepository"},
+      {"file_path": "internal/model/code_chunk.go", "symbol_name": "CodeChunk"}
+    ]
+  },
+  {
+    "category": "natural_embedding",
+    "name": "remote_embedding_response_order",
+    "question": "批量 embedding 返回多个向量时，系统怎么保证每个向量对应到原来的代码片段？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "embedRemoteBatch"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "alignEmbeddingVectors"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "chinese_question_hits_english_code",
+    "question": "用户用中文问代码逻辑时，系统怎么尽量匹配到英文源码里的函数和文件？",
+    "relevant": [
+      {"file_path": "internal/service/query_alias.go", "symbol_name": "expandQueryText"},
+      {"file_path": "internal/service/query_plan.go", "symbol_name": "BuildQueryPlan"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "analyzeSearchFeatures"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "why_hybrid_search",
+    "question": "为什么只做向量检索还不够，还要加关键词和全文检索？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "Search"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "vectorSearch"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "keywordSearch"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "same_chunk_from_two_paths",
+    "question": "同一个代码片段如果同时被向量和关键词命中，排序时会怎么处理？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "fuseCitationsRRF"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "citationKey"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "file_name_or_function_query",
+    "question": "如果用户直接问某个文件名或者函数名，系统是怎么把它当成精确信息检索的？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "analyzeSearchFeatures"},
+      {"file_path": "internal/service/retriever.go", "symbol_name": "buildKeywordSearchQuery"}
+    ]
+  },
+  {
+    "category": "natural_chat",
+    "name": "answer_with_evidence",
+    "question": "为什么回答问题时要把代码片段作为上下文交给大模型，而不是直接让模型回答？",
+    "relevant": [
+      {"file_path": "internal/service/answer.go", "symbol_name": "Ask"},
+      {"file_path": "internal/service/answer.go", "symbol_name": "codeAnswerUserPrompt"},
+      {"file_path": "internal/service/answer.go", "symbol_name": "promptCitations"}
+    ]
+  },
+  {
+    "category": "natural_chat",
+    "name": "model_not_configured_fallback",
+    "question": "没有配置大模型 key 的时候，问答接口为什么还能返回一些内容？",
+    "relevant": [
+      {"file_path": "internal/service/answer.go", "symbol_name": "Ask"},
+      {"file_path": "internal/service/answer.go", "symbol_name": "localAnswer"},
+      {"file_path": "internal/service/llm.go", "symbol_name": "callLLMWithModel"}
+    ]
+  },
+  {
+    "category": "natural_impact",
+    "name": "diff_user_pastes_text",
+    "question": "用户粘贴一段 git diff 后，系统怎么知道应该重点看哪些文件？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "Analyze"},
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffHints"},
+      {"file_path": "internal/util/diff.go", "symbol_name": "ExtractDiffPaths"}
+    ]
+  },
+  {
+    "category": "natural_impact",
+    "name": "diff_filters_unrelated_evidence",
+    "question": "影响分析为什么不会把所有召回片段都展示出来，而是优先保留和变更文件相关的依据？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "filterCitationsByPaths"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "matchDiffPaths"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "pathMatches"}
+    ]
+  },
+  {
+    "category": "natural_impact",
+    "name": "diff_risk_and_test_suggestions",
+    "question": "变更影响分析里的风险点和建议测试，是根据什么信息组织出来的？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "inferRisks"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "inferTests"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "impactUserPrompt"}
+    ]
+  },
+  {
+    "category": "natural_api",
+    "name": "backend_api_flow",
+    "question": "这个后端对外主要暴露了哪些能力，路由是怎么连到具体业务服务的？",
+    "relevant": [
+      {"file_path": "internal/handler/routes.go", "symbol_name": "RegisterRoutes"},
+      {"file_path": "internal/handler/repo.go", "symbol_name": "createRepository"},
+      {"file_path": "internal/handler/ask.go", "symbol_name": "ask"},
+      {"file_path": "internal/handler/impact.go", "symbol_name": "impactAnalyze"}
+    ]
+  },
+  {
+    "category": "natural_startup",
+    "name": "service_components_wiring",
+    "question": "服务启动时为什么要创建 fetcher、indexer、retriever、answer、impact 这些组件？",
+    "relevant": [
+      {"file_path": "cmd/server/main.go", "symbol_name": "main"},
+      {"file_path": "internal/handler/routes.go", "symbol_name": "App"}
+    ]
   }
 ]
