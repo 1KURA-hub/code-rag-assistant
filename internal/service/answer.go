@@ -76,7 +76,7 @@ func (s *AnswerService) localAnswer(question string, citations []Citation) strin
 }
 
 func codeAnswerSystemPrompt() string {
-	return "你是一名代码仓库分析助手。必须使用中文回答。只能依据提供的代码片段回答，不要编造不存在的函数、模块、字段或调用链。回答保持简洁，不要写长篇分析。格式固定为三段：第一段直接回答问题；第二段说明主要执行流程或设计原因；第三段列少量代码依据，包含文件路径、函数名或行号。证据不足时直接说明证据不足。"
+	return "你是一名代码仓库 RAG 分析助手。必须使用中文回答。只能依据提供的代码片段回答，不要编造不存在的函数、模块、字段或调用链。回答要中等长度，不能只给一两句话，也不要写成长篇论文。先直接回答问题，再说明主要流程、关键设计或注意点，最后列出代码依据。如果问题是“有哪些接口、路由、API”，必须优先依据路由注册、handler 函数和请求结构体回答；证据不足时要说明还缺少路由注册文件。文件名、函数名、字段名直接用普通文本写，不要频繁使用反引号。"
 }
 
 func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citation) string {
@@ -93,7 +93,7 @@ func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citati
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
-	b.WriteString("\n请用中文回答。回答保持简洁，不要写长篇分析。先直接回答问题，再说明主要流程或设计原因，最后给少量代码依据。")
+	b.WriteString("\n请用中文回答。回答要中等长度，先直接回答问题，再说明主要流程、关键设计或注意点，最后给代码依据。不要只给一两句话，也不要写成长篇论文。文件名、函数名、字段名直接用普通文本写。")
 	return b.String()
 }
 

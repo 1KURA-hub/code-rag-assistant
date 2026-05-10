@@ -313,7 +313,7 @@ func uniquePaths(citations []Citation, limit int) []string {
 }
 
 func impactSystemPrompt() string {
-	return "你是一名代码变更影响分析助手。必须使用中文回答。只能依据 diff 和提供的代码片段分析，不要编造不存在的模块或调用链。回答保持简洁，不要写长篇分析。格式固定为四段：变更总结；影响范围；可能风险；建议测试和代码依据。每个风险必须能对应到 diff 或代码片段。证据不足时直接说明证据不足。"
+	return "你是一名代码变更影响分析助手。必须使用中文回答。只能依据 diff 和提供的代码片段分析，不要编造不存在的模块或调用链。回答要中等长度，不能只给一两句话，也不要写成长篇论文。说明变更总结、影响范围、可能风险、建议测试和代码依据。每个风险必须能对应到 diff 或代码片段。证据不足时直接说明证据不足。文件名、函数名、字段名直接用普通文本写，不要频繁使用反引号。"
 }
 
 func impactUserPrompt(cfg config.Config, diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string {
@@ -343,6 +343,6 @@ func impactUserPrompt(cfg config.Config, diffText string, citations []Citation, 
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
-	b.WriteString("\n请用中文输出。回答保持简洁，不要写长篇分析。风险和测试建议必须对应 diff 或引用代码里的具体函数、文件、字段或调用。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。")
+	b.WriteString("\n请用中文输出。回答要中等长度，风险和测试建议必须对应 diff 或引用代码里的具体函数、文件、字段或调用。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。文件名、函数名、字段名直接用普通文本写。")
 	return b.String()
 }

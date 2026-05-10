@@ -15,6 +15,16 @@ func TestMatchedAliasesForChineseMessageQuestion(t *testing.T) {
 	}
 }
 
+func TestMatchedAliasesForAPIQuestion(t *testing.T) {
+	aliases := matchedAliases("这个项目主要接口有哪些？")
+
+	for _, want := range []string{"api", "router", "route", "handler", "registerroutes"} {
+		if !containsString(aliases, want) {
+			t.Fatalf("matchedAliases() = %v, want %q", aliases, want)
+		}
+	}
+}
+
 func TestExpandQueryTextKeepsHintsAndAddsAliases(t *testing.T) {
 	expanded := expandQueryText("Redis Stream 转发逻辑", []string{"mq/relay.go"})
 

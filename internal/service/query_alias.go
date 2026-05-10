@@ -42,6 +42,13 @@ var queryAliases = []struct {
 		},
 	},
 	{
+		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "有哪些接口", "主要接口", "接口入口"},
+		Aliases: []string{
+			"api", "router", "route", "routes", "handler", "endpoint",
+			"get", "post", "group", "registerroutes", "bindjson",
+		},
+	},
+	{
 		Terms: []string{"lua", "脚本", "布隆", "过滤器", "bloom"},
 		Aliases: []string{
 			"lua", "script", "bloom", "filter", "redis", "eval", "sha",
