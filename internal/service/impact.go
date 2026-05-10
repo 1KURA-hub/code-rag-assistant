@@ -44,6 +44,8 @@ func (s *ImpactService) Analyze(ctx context.Context, repositoryID uint, diffText
 	resp := localImpact(diffText, citations)
 	if generated, err := callLLM(ctx, s.cfg, impactSystemPrompt(), impactUserPrompt(diffText, citations, resp.MatchedPaths, resp.UnmatchedPaths)); err == nil {
 		resp.Summary = generated
+		resp.Risks = nil
+		resp.SuggestedTests = nil
 	}
 	return resp, nil
 }
