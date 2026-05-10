@@ -748,20 +748,66 @@ button {
 }
 
 .message-content p {
-  margin: 0 0 9px;
+  margin: 0 0 11px;
 }
 
 .message-content p:last-child {
   margin-bottom: 0;
 }
 
+.message-content h1,
+.message-content h2,
 .message-content h3 {
-  margin: 14px 0 7px;
+  color: var(--text);
+  line-height: 1.32;
+  letter-spacing: 0;
+}
+
+.message-content h1 {
+  margin: 18px 0 10px;
+  font-size: 23px;
+  font-weight: 760;
+}
+
+.message-content h2 {
+  margin: 17px 0 9px;
+  font-size: 19px;
+  font-weight: 740;
+}
+
+.message-content h3 {
+  margin: 15px 0 7px;
   font-size: 16px;
+  font-weight: 720;
+}
+
+.message-content strong {
+  color: var(--text);
+  font-weight: 760;
+}
+
+.soft-break {
+  height: 8px;
 }
 
 .bullet-line {
-  padding-left: 4px;
+  position: relative;
+  padding-left: 18px;
+}
+
+.bullet-line::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: .82em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.number-line {
+  padding-left: 2px;
 }
 
 .assistant-message {
@@ -790,6 +836,11 @@ button {
   align-items: center;
   gap: 10px;
   color: var(--muted);
+}
+
+.message-end {
+  height: 1px;
+  scroll-margin-bottom: 128px;
 }
 
 .dots {

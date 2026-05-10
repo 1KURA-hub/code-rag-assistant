@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CircleHelp, Expand, GitBranch, Moon, PanelRightOpen, Shrink, Sun } from "lucide-react";
 import "./styles.css";
@@ -185,9 +185,18 @@ function App() {
     return () => clearInterval(timer);
   }, [repo?.id, repo?.status]);
 
-  useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, busy]);
+  useLayoutEffect(() => {
+    const scrollToEnd = () => {
+      messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    };
+    scrollToEnd();
+    const frame = requestAnimationFrame(scrollToEnd);
+    const timer = window.setTimeout(scrollToEnd, 80);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [messages.length, busy, pendingIntent]);
 
   useEffect(() => {
     if (!repoPopoverOpen) return;
@@ -267,6 +276,7 @@ function App() {
   }
 
   async function submitMessage() {
+    if (busy) return;
     const value = input.trim();
     if (!value) return;
     let activeRepo = repo;
@@ -471,7 +481,7 @@ function App() {
                 </div>
               </div>
             )}
-            <div ref={messageEndRef} />
+            <div ref={messageEndRef} className="message-end" />
           </div>
         </section>
 
@@ -690,6 +700,7 @@ function WelcomeState({ input, greeting, busy, promptMenuOpen, onInputChange, on
 
 function Composer({ input, busy, promptMenuOpen, onInputChange, onSubmit, onTogglePrompts, onClosePrompts, onPickPrompt }) {
   const promptMenuRef = useRef(null);
+  const composingRef = useRef(false);
 
   useEscape(onClosePrompts, promptMenuOpen);
 
@@ -735,7 +746,15 @@ function Composer({ input, busy, promptMenuOpen, onInputChange, onSubmit, onTogg
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
         placeholder="询问代码逻辑，或粘贴 git diff 分析影响..."
+        onCompositionStart={() => {
+          composingRef.current = true;
+        }}
+        onCompositionEnd={() => {
+          composingRef.current = false;
+        }}
         onKeyDown={(e) => {
+          const composing = composingRef.current || e.isComposing || e.nativeEvent?.isComposing || e.keyCode === 229;
+          if (composing) return;
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             onSubmit();
@@ -754,13 +773,27 @@ function RichText({ content }) {
   return (
     <div className="message-content">
       {lines.map((line, index) => {
-        if (!line.trim()) return <br key={index} />;
-        if (line.startsWith("## ")) return <h3 key={index}>{line.replace(/^##\s+/, "")}</h3>;
-        if (line.startsWith("- ")) return <p className="bullet-line" key={index}>{line}</p>;
-        return <p key={index}>{line}</p>;
+        const trimmed = line.trim();
+        if (!trimmed) return <div className="soft-break" key={index} />;
+        if (trimmed.startsWith("### ")) return <h3 key={index}>{renderInline(trimmed.replace(/^###\s+/, ""))}</h3>;
+        if (trimmed.startsWith("## ")) return <h2 key={index}>{renderInline(trimmed.replace(/^##\s+/, ""))}</h2>;
+        if (trimmed.startsWith("# ")) return <h1 key={index}>{renderInline(trimmed.replace(/^#\s+/, ""))}</h1>;
+        if (/^[-*]\s+/.test(trimmed)) return <p className="bullet-line" key={index}>{renderInline(trimmed.replace(/^[-*]\s+/, ""))}</p>;
+        if (/^\d+[.、]\s+/.test(trimmed)) return <p className="number-line" key={index}>{renderInline(trimmed)}</p>;
+        return <p key={index}>{renderInline(trimmed)}</p>;
       })}
     </div>
   );
+}
+
+function renderInline(text) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
 }
 
 function IndexStepper({ status }) {
