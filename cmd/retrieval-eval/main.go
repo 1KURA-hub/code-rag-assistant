@@ -41,6 +41,8 @@ type evalSummary struct {
 func main() {
 	repoID := flag.Uint("repo-id", 1, "repository id to evaluate")
 	evalPath := flag.String("eval", "internal/service/testdata/retrieval_eval_cases.json", "retrieval eval cases path")
+	onlyCase := flag.String("only", "", "run only one eval case by name")
+	debug := flag.Bool("debug", false, "print query plan and returned citations")
 	flag.Parse()
 
 	cases, err := loadEvalCases(*evalPath)
@@ -58,6 +60,9 @@ func main() {
 	summary := evalSummary{}
 	grouped := map[string]*evalSummary{}
 	for _, tc := range cases {
+		if *onlyCase != "" && tc.Name != *onlyCase {
+			continue
+		}
 		category := evalCategory(tc)
 		group := groupedSummary(grouped, category)
 		summary.Total++
@@ -72,6 +77,9 @@ func main() {
 		result := evaluateCase(tc, citations)
 		addResult(&summary, result)
 		addResult(group, result)
+		if *debug {
+			printDebug(ctx, cfg, tc, citations)
+		}
 
 		if result.FirstHitRank > 0 {
 			fmt.Printf("[PASS] %s/%s first_hit=%d recall@5=%.2f\n", category, tc.Name, result.FirstHitRank, result.RecallAt5)
@@ -81,6 +89,31 @@ func main() {
 	}
 	printSummary("Retrieval Eval Summary", summary)
 	printGroupedSummary(grouped)
+}
+
+func printDebug(ctx context.Context, cfg config.Config, tc evalCase, citations []service.Citation) {
+	plan := service.BuildQueryPlanSnapshot(ctx, cfg, tc.Question, tc.Hints)
+	fmt.Printf("\n[DEBUG] %s/%s\n", evalCategory(tc), tc.Name)
+	fmt.Printf("question: %s\n", tc.Question)
+	fmt.Printf("embedding_text: %s\n", compact(plan.EmbeddingText, 360))
+	fmt.Printf("terms=%v\npaths=%v\nsymbols=%v\nsymbol_types=%v\nlanguages=%v\n",
+		plan.Terms, plan.Paths, plan.Symbols, plan.SymbolTypes, plan.Languages)
+	for i, citation := range citations {
+		if i >= 8 {
+			break
+		}
+		fmt.Printf("top%d: %s#%s type=%s score=%.6f lines=%d-%d\n",
+			i+1, citation.FilePath, citation.SymbolName, citation.SymbolType, citation.Score, citation.StartLine, citation.EndLine)
+	}
+}
+
+func compact(text string, limit int) string {
+	text = strings.Join(strings.Fields(text), " ")
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	return string(runes[:limit]) + "..."
 }
 
 func loadEvalCases(path string) ([]evalCase, error) {

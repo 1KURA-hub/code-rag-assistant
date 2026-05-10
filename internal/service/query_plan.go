@@ -15,6 +15,16 @@ type QueryPlan struct {
 	Features      searchFeatures
 }
 
+type QueryPlanSnapshot struct {
+	Original      string   `json:"original"`
+	EmbeddingText string   `json:"embedding_text"`
+	Terms         []string `json:"terms"`
+	Paths         []string `json:"paths"`
+	Symbols       []string `json:"symbols"`
+	SymbolTypes   []string `json:"symbol_types"`
+	Languages     []string `json:"languages"`
+}
+
 type modelQueryPlan struct {
 	RewrittenQuery string   `json:"rewritten_query"`
 	Terms          []string `json:"terms"`
@@ -25,6 +35,10 @@ type modelQueryPlan struct {
 }
 
 func buildQueryPlan(ctx context.Context, cfg config.Config, query string, hints []string) QueryPlan {
+	return BuildQueryPlan(ctx, cfg, query, hints)
+}
+
+func BuildQueryPlan(ctx context.Context, cfg config.Config, query string, hints []string) QueryPlan {
 	plan := localQueryPlan(query, hints)
 	if !cfg.QueryRewriteEnabled || cfg.OpenAIAPIKey == "" {
 		return plan
@@ -42,6 +56,19 @@ func buildQueryPlan(ctx context.Context, cfg config.Config, query string, hints 
 	}
 	mergeModelQueryPlan(&plan, modelPlan, cfg.QueryRewriteMaxTerms)
 	return plan
+}
+
+func BuildQueryPlanSnapshot(ctx context.Context, cfg config.Config, query string, hints []string) QueryPlanSnapshot {
+	plan := BuildQueryPlan(ctx, cfg, query, hints)
+	return QueryPlanSnapshot{
+		Original:      plan.Original,
+		EmbeddingText: plan.EmbeddingText,
+		Terms:         append([]string{}, plan.Features.Terms...),
+		Paths:         append([]string{}, plan.Features.Paths...),
+		Symbols:       append([]string{}, plan.Features.Symbols...),
+		SymbolTypes:   append([]string{}, plan.Features.SymbolTypes...),
+		Languages:     append([]string{}, plan.Features.Languages...),
+	}
 }
 
 func localQueryPlan(query string, hints []string) QueryPlan {
