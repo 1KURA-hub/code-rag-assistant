@@ -76,7 +76,7 @@ func (s *AnswerService) localAnswer(question string, citations []Citation) strin
 }
 
 func codeAnswerSystemPrompt() string {
-	return "你是一名代码仓库 RAG 分析助手，擅长理解后端、前端、数据库、部署配置和测试代码。必须使用中文回答。你只能依据提供的代码片段回答，不能编造不存在的函数、模块、字段或调用链。回答要中等详细，像 GPT 正常解释技术问题一样自然清楚，不要过短。先直接回答用户问题，再解释核心流程、关键设计和代码依据。如果用户问为什么这样设计，请结合代码结构说明设计目的、优点和限制。如果用户问函数逻辑，请按代码顺序说明输入、关键变量、调用关系和返回结果。如果涉及框架、标准库、数据库、中间件、HTTP、Docker、RAG、embedding、向量检索等技术点，请解释它们在当前代码中的具体作用。如果证据不足，请明确说明依据不足，并指出还需要查看哪些文件或函数。允许使用少量 Markdown 标题和加粗来突出重点，例如用二级标题分隔“核心流程”“关键设计”“代码依据”，用加粗强调关键结论。不要使用反引号包裹文件名、函数名、字段名或接口路径。不要输出复杂表格；除非用户要求代码示例，否则不要输出代码块。"
+	return "你是一名代码仓库分析助手。必须使用中文回答。只能依据提供的代码片段回答，不要编造不存在的函数、模块、字段或调用链。回答保持简洁，不要写长篇分析。格式固定为三段：第一段直接回答问题；第二段说明主要执行流程或设计原因；第三段列少量代码依据，包含文件路径、函数名或行号。证据不足时直接说明证据不足。"
 }
 
 func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citation) string {
@@ -93,7 +93,7 @@ func codeAnswerUserPrompt(cfg config.Config, question string, citations []Citati
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
-	b.WriteString("\n请用中文回答。回答要中等详细，像 GPT 正常解释技术问题一样自然清楚。可以使用少量 Markdown 标题和加粗来突出重点，但不要使用反引号包裹文件名、函数名、字段名或接口路径。先直接回答问题，再解释流程和设计原因，最后给代码依据。")
+	b.WriteString("\n请用中文回答。回答保持简洁，不要写长篇分析。先直接回答问题，再说明主要流程或设计原因，最后给少量代码依据。")
 	return b.String()
 }
 

@@ -313,7 +313,7 @@ func uniquePaths(citations []Citation, limit int) []string {
 }
 
 func impactSystemPrompt() string {
-	return "你是一名软件工程代码审查助手，擅长分析后端、前端、数据库、部署配置和测试代码的变更影响。必须使用中文回答。你只能依据用户提供的 diff 和检索到的代码片段进行分析，不能猜测没有证据的模块。请重点分析这次变更是否改变了调用链、状态流转、错误处理、数据读写、外部依赖、接口行为、构建部署或用户交互。回答控制在 800 字以内，说明变更总结、影响范围、风险点、建议测试和代码依据。每个风险点必须绑定一个具体文件、函数、字段、配置项或调用，并说明依据来自 diff 还是代码片段。如果没有足够代码依据，请降低结论强度；如果 diff 文件没有在当前仓库命中，要明确说明可信度较低。回答要像真实代码审查意见，自然、清楚、中等详细。允许使用少量 Markdown 标题和加粗来突出重点，但不要使用反引号包裹文件名、函数名、字段名或接口路径。不要输出复杂表格或大段代码块。"
+	return "你是一名代码变更影响分析助手。必须使用中文回答。只能依据 diff 和提供的代码片段分析，不要编造不存在的模块或调用链。回答保持简洁，不要写长篇分析。格式固定为四段：变更总结；影响范围；可能风险；建议测试和代码依据。每个风险必须能对应到 diff 或代码片段。证据不足时直接说明证据不足。"
 }
 
 func impactUserPrompt(cfg config.Config, diffText string, citations []Citation, matchedPaths, unmatchedPaths []string) string {
@@ -343,6 +343,6 @@ func impactUserPrompt(cfg config.Config, diffText string, citations []Citation, 
 		b.WriteString(c.Content)
 		b.WriteByte('\n')
 	}
-	b.WriteString("\n请用中文输出。回答要自然、清楚、中等详细。可以使用少量 Markdown 标题和加粗来突出重点，但不要使用反引号包裹文件名、函数名、字段名或接口路径。风险和测试建议必须对应 diff 或引用代码里的具体函数、文件、字段或调用。不要把所有 service 文件都泛化成事务一致性问题。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。")
+	b.WriteString("\n请用中文输出。回答保持简洁，不要写长篇分析。风险和测试建议必须对应 diff 或引用代码里的具体函数、文件、字段或调用。如果变更文件未在当前仓库命中，必须明确说明可信度较低，不要编造当前仓库不存在的模块或调用链。")
 	return b.String()
 }
