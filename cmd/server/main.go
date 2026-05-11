@@ -71,6 +71,7 @@ func main() {
 	}))
 	handler.RegisterRoutes(router, ingest, answer, impact)
 	router.Static("/assets", "./static/assets")
+	router.StaticFile("/favicon.png", "./static/favicon.png")
 	router.StaticFile("/", "./static/index.html")
 
 	log.Printf("code-rag-assistant listening on http://127.0.0.1:%s", cfg.Port)
