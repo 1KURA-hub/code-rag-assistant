@@ -18,7 +18,6 @@ type Citation struct {
 	FilePath   string  `json:"file_path"`
 	StartLine  int     `json:"start_line"`
 	EndLine    int     `json:"end_line"`
-	ChunkIndex int     `json:"-"`
 	Language   string  `json:"language"`
 	SymbolName string  `json:"symbol_name"`
 	SymbolType string  `json:"symbol_type"`
@@ -66,11 +65,6 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 		return nil, err
 	}
 	rows = fuseCitationsRRF(r.cfg.RRFK, rows, keywordRows)
-	neighborRows, err := r.sameFileNeighbors(ctx, repositoryID, rows, r.cfg.TopK)
-	if err != nil {
-		return nil, err
-	}
-	rows = fuseCitationsRRF(r.cfg.RRFK, rows, neighborRows)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}
@@ -80,7 +74,7 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 func (r *Retriever) vectorSearch(ctx context.Context, repositoryID uint, vector string, limit int) ([]Citation, error) {
 	var rows []Citation
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT id, file_path, start_line, end_line, chunk_index, language, symbol_name, symbol_type, content,
+		SELECT id, file_path, start_line, end_line, language, symbol_name, symbol_type, content,
 		       1 - (embedding_vector <=> ?::vector) AS score
 		FROM code_chunks
 		WHERE repository_id = ?
@@ -102,66 +96,6 @@ func (r *Retriever) keywordSearch(ctx context.Context, repositoryID uint, featur
 	err := r.db.WithContext(ctx).Raw(query, args...).Scan(&rows).Error
 	if err != nil {
 		return nil, err
-	}
-	return rows, nil
-}
-
-func (r *Retriever) sameFileNeighbors(ctx context.Context, repositoryID uint, anchors []Citation, limit int) ([]Citation, error) {
-	if limit <= 0 || len(anchors) == 0 {
-		return nil, nil
-	}
-	type neighborKey struct {
-		filePath   string
-		chunkIndex int
-	}
-	seenAnchors := map[string]struct{}{}
-	seenNeighbors := map[neighborKey]struct{}{}
-	var candidates []neighborKey
-	for _, anchor := range anchors {
-		if anchor.FilePath == "" {
-			continue
-		}
-		seenAnchors[citationKey(anchor)] = struct{}{}
-		for _, offset := range []int{-1, 1} {
-			idx := anchor.ChunkIndex + offset
-			if idx < 0 {
-				continue
-			}
-			key := neighborKey{filePath: anchor.FilePath, chunkIndex: idx}
-			if _, ok := seenNeighbors[key]; ok {
-				continue
-			}
-			seenNeighbors[key] = struct{}{}
-			candidates = append(candidates, key)
-			if len(candidates) >= limit {
-				break
-			}
-		}
-		if len(candidates) >= limit {
-			break
-		}
-	}
-
-	var rows []Citation
-	for _, candidate := range candidates {
-		var row Citation
-		err := r.db.WithContext(ctx).Raw(`
-			SELECT id, file_path, start_line, end_line, chunk_index, language, symbol_name, symbol_type, content,
-			       0.35 AS score
-			FROM code_chunks
-			WHERE repository_id = ? AND file_path = ? AND chunk_index = ?
-			LIMIT 1
-		`, repositoryID, candidate.filePath, candidate.chunkIndex).Scan(&row).Error
-		if err != nil {
-			return nil, err
-		}
-		if row.ID == 0 {
-			continue
-		}
-		if _, ok := seenAnchors[citationKey(row)]; ok {
-			continue
-		}
-		rows = append(rows, row)
 	}
 	return rows, nil
 }
@@ -223,7 +157,7 @@ func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit i
 	args = append(args, limit)
 
 	query := fmt.Sprintf(`
-		SELECT id, file_path, start_line, end_line, chunk_index, language, symbol_name, symbol_type, content,
+		SELECT id, file_path, start_line, end_line, language, symbol_name, symbol_type, content,
 		       %s AS score
 		FROM code_chunks
 		WHERE repository_id = ? AND (%s)
