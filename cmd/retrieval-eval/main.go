@@ -42,6 +42,8 @@ func main() {
 	repoID := flag.Uint("repo-id", 1, "repository id to evaluate")
 	evalPath := flag.String("eval", "internal/service/testdata/retrieval_eval_cases.json", "retrieval eval cases path")
 	onlyCase := flag.String("only", "", "run only one eval case by name")
+	includeCategories := flag.String("category", "", "comma-separated categories to include")
+	excludeCategories := flag.String("exclude-category", "", "comma-separated categories to exclude")
 	debug := flag.Bool("debug", false, "print query plan and returned citations")
 	flag.Parse()
 
@@ -59,11 +61,16 @@ func main() {
 	ctx := context.Background()
 	summary := evalSummary{}
 	grouped := map[string]*evalSummary{}
+	includeSet := parseCategorySet(*includeCategories)
+	excludeSet := parseCategorySet(*excludeCategories)
 	for _, tc := range cases {
 		if *onlyCase != "" && tc.Name != *onlyCase {
 			continue
 		}
 		category := evalCategory(tc)
+		if !shouldRunCategory(category, includeSet, excludeSet) {
+			continue
+		}
 		group := groupedSummary(grouped, category)
 		summary.Total++
 		group.Total++
@@ -91,6 +98,29 @@ func main() {
 	}
 	printSummary("Retrieval Eval Summary", summary)
 	printGroupedSummary(grouped)
+}
+
+func parseCategorySet(value string) map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, item := range strings.Split(value, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		set[item] = struct{}{}
+	}
+	return set
+}
+
+func shouldRunCategory(category string, includeSet, excludeSet map[string]struct{}) bool {
+	if _, ok := excludeSet[category]; ok {
+		return false
+	}
+	if len(includeSet) == 0 {
+		return true
+	}
+	_, ok := includeSet[category]
+	return ok
 }
 
 func printDebug(ctx context.Context, cfg config.Config, tc evalCase, citations []service.Citation) {
