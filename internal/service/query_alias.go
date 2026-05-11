@@ -7,60 +7,103 @@ var queryAliases = []struct {
 	Aliases []string
 }{
 	{
-		Terms: []string{"仓库", "导入", "索引", "重新索引", "下载", "解压", "扫描", "状态", "github", "repo", "repository"},
+		Terms: []string{"项目", "代码", "仓库", "结构", "架构", "模块", "目录", "分层", "主流程", "调用链"},
 		Aliases: []string{
-			"repository", "repo", "ingest", "index", "indexing", "github", "download",
-			"zip", "unzip", "scan", "status", "pending", "ready", "failed", "CreateAndIndex",
+			"project", "code", "repository", "repo", "module", "package",
+			"architecture", "structure", "layer", "service", "dependency", "flow",
 		},
 	},
 	{
-		Terms: []string{"分片", "切片", "ast", "语法树", "函数", "方法", "结构体", "类型", "常量", "变量", "行号", "声明"},
+		Terms: []string{"函数", "方法", "结构体", "类型", "常量", "变量", "声明", "分片", "切片", "ast", "语法树", "行号"},
 		Aliases: []string{
-			"chunk", "chunking", "ast", "parser", "parse", "declaration", "decl",
-			"function", "method", "type", "const", "var", "symbol", "line", "ChunkSourceFile",
+			"function", "method", "struct", "interface", "type", "const", "var",
+			"declaration", "symbol", "chunk", "parser", "parse", "ast", "line",
 		},
 	},
 	{
-		Terms: []string{"embedding", "向量", "向量化", "批量", "归一化", "pgvector", "相似度", "余弦"},
+		Terms: []string{"接口", "api", "路由", "handler", "controller", "endpoint", "参数", "请求", "响应", "绑定"},
 		Aliases: []string{
-			"embedding", "embed", "Embed", "EmbedBatch", "vector", "pgvector",
-			"cosine", "normalize", "normalizeVector", "embedding_vector", "VectorLiteral",
+			"api", "router", "route", "routes", "handler", "controller", "endpoint",
+			"request", "response", "param", "params", "binding", "bind", "json",
 		},
 	},
 	{
-		Terms: []string{"检索", "召回", "混合检索", "关键词", "全文检索", "重排", "融合", "rrf", "topk", "依据", "引用"},
+		Terms: []string{"数据库", "表", "模型", "落库", "查询", "事务", "索引", "mysql", "postgres", "gorm", "dao"},
 		Aliases: []string{
-			"retriever", "retrieve", "Search", "keyword", "full-text", "search_vector",
-			"plainto_tsquery", "rank", "rerank", "RRF", "TopK", "citation", "evidence",
-			"BuildQueryPlan", "query rewrite", "alias",
+			"database", "db", "mysql", "postgres", "postgresql", "table", "model",
+			"schema", "repository", "dao", "gorm", "query", "transaction", "commit",
+			"rollback", "migration", "index",
 		},
 	},
 	{
-		Terms: []string{"问答", "回答", "大模型", "模型", "prompt", "提示词", "上下文", "幻觉", "本地兜底"},
+		Terms: []string{"缓存", "redis", "热点", "穿透", "击穿", "过期", "ttl", "布隆", "singleflight"},
 		Aliases: []string{
-			"answer", "Ask", "LLM", "model", "prompt", "context", "citation",
-			"callLLM", "localAnswer", "promptCitations", "OpenAI",
+			"redis", "cache", "key", "ttl", "expire", "expiration", "bloom",
+			"filter", "singleflight", "hot key", "penetration", "breakdown",
 		},
 	},
 	{
-		Terms: []string{"diff", "变更", "影响分析", "风险", "测试建议", "修改影响", "git diff"},
+		Terms: []string{"消息", "队列", "mq", "异步", "生产者", "消费者", "消费", "重试", "死信", "ack", "nack"},
 		Aliases: []string{
-			"diff", "impact", "Analyze", "ExtractDiffHints", "risk", "risks",
-			"suggested_tests", "changed", "module",
+			"message", "queue", "mq", "producer", "consumer", "consume",
+			"async", "retry", "ack", "nack", "dead letter", "dlq", "routing",
 		},
 	},
 	{
-		Terms: []string{"接口", "api", "路由", "handler", "endpoint", "参数", "请求", "响应", "main", "启动"},
+		Terms: []string{"登录", "注册", "认证", "鉴权", "权限", "token", "jwt", "session", "中间件"},
 		Aliases: []string{
-			"api", "router", "route", "routes", "handler", "endpoint", "request",
-			"response", "ShouldBindJSON", "RegisterRoutes", "main", "server",
+			"auth", "authentication", "authorization", "login", "register",
+			"token", "jwt", "session", "middleware", "claims", "permission",
 		},
 	},
 	{
-		Terms: []string{"配置", "环境变量", "数据库", "缓存", "redis", "postgres", "gorm", "docker", "部署"},
+		Terms: []string{"配置", "环境变量", "启动", "初始化", "依赖", "部署", "docker", "compose", "yaml", "json"},
 		Aliases: []string{
-			"config", "env", "environment", "postgres", "postgresql", "gorm",
-			"redis", "cache", "cache aside", "docker", "compose", "OpenPostgres",
+			"config", "configuration", "env", "environment", "startup",
+			"bootstrap", "init", "main", "dependency", "docker", "compose",
+			"deploy", "yaml", "json",
+		},
+	},
+	{
+		Terms: []string{"并发", "协程", "goroutine", "channel", "锁", "超时", "context", "worker", "线程池"},
+		Aliases: []string{
+			"concurrency", "concurrent", "goroutine", "channel", "context",
+			"timeout", "deadline", "cancel", "lock", "mutex", "worker", "pool",
+		},
+	},
+	{
+		Terms: []string{"一致性", "幂等", "重复", "去重", "事务", "回滚", "唯一索引", "补偿"},
+		Aliases: []string{
+			"consistency", "idempotency", "idempotent", "duplicate", "dedup",
+			"unique", "unique index", "transaction", "commit", "rollback", "compensation",
+		},
+	},
+	{
+		Terms: []string{"错误", "异常", "失败", "降级", "兜底", "日志", "监控", "排查", "debug"},
+		Aliases: []string{
+			"error", "exception", "failure", "fallback", "degrade", "log",
+			"logger", "metrics", "trace", "debug", "monitor",
+		},
+	},
+	{
+		Terms: []string{"测试", "单元测试", "集成测试", "mock", "覆盖率", "压测", "benchmark"},
+		Aliases: []string{
+			"test", "tests", "unit test", "integration test", "mock", "assert",
+			"coverage", "benchmark", "load test",
+		},
+	},
+	{
+		Terms: []string{"前端", "页面", "组件", "状态", "props", "hook", "样式", "css", "react", "vue"},
+		Aliases: []string{
+			"frontend", "page", "component", "state", "props", "hook",
+			"style", "css", "react", "vue", "render",
+		},
+	},
+	{
+		Terms: []string{"ai", "rag", "embedding", "向量", "检索", "召回", "大模型", "prompt", "依据", "引用"},
+		Aliases: []string{
+			"ai", "rag", "embedding", "vector", "retrieval", "retrieve",
+			"search", "llm", "prompt", "context", "citation", "evidence",
 		},
 	},
 }

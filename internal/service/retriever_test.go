@@ -80,7 +80,7 @@ func TestKeywordContentTermsExcludeStrongFeatures(t *testing.T) {
 			t.Fatalf("keywordContentTerms() = %v, should not include strong feature %q", terms, excluded)
 		}
 	}
-	for _, want := range []string{"retriever", "retrieve"} {
+	for _, want := range []string{"function", "parser"} {
 		if !containsString(terms, want) {
 			t.Fatalf("keywordContentTerms() = %v, want alias term %q", terms, want)
 		}

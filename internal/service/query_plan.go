@@ -107,7 +107,7 @@ func queryRewriteSystemPrompt() string {
 		"rewritten_query 用于 embedding，必须包含英文技术词、后端常见源码词和必要的中文原意。",
 		"terms 用于代码内容全文检索，必须输出 5 到 12 个短词或短语；paths 用于文件路径；symbols 用于可能的函数、方法、变量、类型名；symbol_types 只能包含 function、method、type、const、var；languages 用于语言名。",
 		"不要输出自然语言解释。symbols 可以给出可能出现在源码里的命名线索，最终系统会用真实代码命中结果校验，不会把你的猜测当事实。",
-		"常见映射：仓库导入/重新索引 -> ingest repository CreateAndIndex index status pending ready failed；代码分片/AST -> chunk parser declaration function method type const var ChunkSourceFile；向量检索 -> embedding pgvector vectorSearch keywordSearch RRF TopK citation；代码问答 -> Ask retriever promptCitations callLLM localAnswer；diff影响分析 -> Analyze ExtractDiffHints impacted_modules risks suggested_tests。",
+		"通用后端映射：项目结构 -> project module package architecture layer dependency flow；接口路由 -> api router route handler controller endpoint request response param bind json；数据库 -> database db table model schema repository dao query transaction commit rollback migration；缓存 -> redis cache key ttl bloom filter singleflight；消息队列 -> message queue producer consumer async retry ack dead letter dlq；鉴权 -> auth authentication authorization jwt token session middleware claims permission；配置启动 -> config env startup bootstrap init main dependency docker compose yaml json；并发 -> goroutine channel context timeout lock mutex worker pool；一致性 -> consistency idempotency duplicate unique index compensation；错误测试 -> error fallback log metrics trace test mock coverage。",
 	}, "\n")
 }
 
