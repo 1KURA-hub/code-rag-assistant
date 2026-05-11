@@ -33,7 +33,7 @@ type searchFeatures struct {
 	Languages   []string
 }
 
-const rrfK = 60.0
+const defaultRRFK = 60.0
 
 type Retriever struct {
 	db       *gorm.DB
@@ -64,7 +64,7 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 	if err != nil {
 		return nil, err
 	}
-	rows = fuseCitationsRRF(rows, keywordRows)
+	rows = fuseCitationsRRF(r.cfg.RRFK, rows, keywordRows)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}
@@ -342,13 +342,16 @@ func keywordContentTerms(features searchFeatures) []string {
 	return terms
 }
 
-func fuseCitationsRRF(groups ...[]Citation) []Citation {
+func fuseCitationsRRF(k float64, groups ...[]Citation) []Citation {
+	if k <= 0 {
+		k = defaultRRFK
+	}
 	seen := map[string]int{}
 	var merged []Citation
 	for _, group := range groups {
 		for rank, row := range group {
 			key := citationKey(row)
-			rrfScore := 1 / (rrfK + float64(rank+1))
+			rrfScore := 1 / (k + float64(rank+1))
 			if idx, ok := seen[key]; ok {
 				merged[idx].Score += rrfScore
 				continue

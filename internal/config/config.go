@@ -16,6 +16,7 @@ type Config struct {
 	ChunkMaxLines        int
 	ChunkOverlapLines    int
 	TopK                 int
+	RRFK                 float64
 	PromptCitationLimit  int
 	PromptChunkMaxChars  int
 	QueryRewriteEnabled  bool
@@ -53,6 +54,7 @@ func Load() Config {
 		ChunkMaxLines:        getenvInt("CHUNK_MAX_LINES", 80),
 		ChunkOverlapLines:    getenvInt("CHUNK_OVERLAP_LINES", 12),
 		TopK:                 getenvInt("TOP_K", 8),
+		RRFK:                 getenvFloat("RRF_K", 60),
 		PromptCitationLimit:  getenvInt("PROMPT_CITATION_LIMIT", 5),
 		PromptChunkMaxChars:  getenvInt("PROMPT_CHUNK_MAX_CHARS", 1200),
 		QueryRewriteEnabled:  getenvBool("QUERY_REWRITE_ENABLED", false),
@@ -88,6 +90,18 @@ func getenvInt(key string, fallback int) int {
 		return fallback
 	}
 	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func getenvFloat(key string, fallback float64) float64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return fallback
 	}

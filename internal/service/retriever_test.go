@@ -167,6 +167,7 @@ func TestSplitSearchTermsSeparatesCodeAndChineseBoundaries(t *testing.T) {
 
 func TestFuseCitationsRRFBoostsChunksFoundByMultipleRetrievers(t *testing.T) {
 	rows := fuseCitationsRRF(
+		defaultRRFK,
 		[]Citation{{ID: 1, FilePath: "a.go"}, {ID: 2, FilePath: "b.go"}},
 		[]Citation{{ID: 2, FilePath: "b.go"}, {ID: 3, FilePath: "c.go"}},
 	)

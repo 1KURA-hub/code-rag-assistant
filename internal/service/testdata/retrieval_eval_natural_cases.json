@@ -628,5 +628,89 @@
       {"file_path": "cmd/server/main.go", "symbol_name": "main"},
       {"file_path": "internal/handler/routes.go", "symbol_name": "App"}
     ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "duplicate_index_request",
+    "question": "如果用户连续点击重新索引同一个仓库，后端怎么避免同时跑多个索引任务？",
+    "relevant": [
+      {"file_path": "internal/service/ingest.go", "symbol_name": "CreateAndIndex"},
+      {"file_path": "internal/service/ingest.go", "symbol_name": "staleIndexTaskAfter"}
+    ]
+  },
+  {
+    "category": "natural_repo",
+    "name": "github_branch_download_fallback",
+    "question": "下载 GitHub 仓库时，如果默认分支不是 main，系统还有没有其他分支兜底？",
+    "relevant": [
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "DownloadZip"},
+      {"file_path": "internal/service/github_fetcher.go", "symbol_name": "downloadURL"}
+    ]
+  },
+  {
+    "category": "natural_files",
+    "name": "ignore_large_or_unwanted_files",
+    "question": "扫描仓库源码时，系统怎么过滤掉没必要索引的目录或大文件？",
+    "relevant": [
+      {"file_path": "internal/util/files.go", "symbol_name": "ScanSourceFiles"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "topk_final_cut",
+    "question": "检索阶段为什么召回很多候选片段，最后只返回固定数量的代码依据？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "Search"},
+      {"file_path": "internal/config/config.go", "symbol_name": "Config"}
+    ]
+  },
+  {
+    "category": "natural_retrieval",
+    "name": "rrf_k_meaning",
+    "question": "RRF 融合排序里的 k 值会影响什么，为什么它适合融合向量和关键词结果？",
+    "relevant": [
+      {"file_path": "internal/service/retriever.go", "symbol_name": "fuseCitationsRRF"},
+      {"file_path": "internal/config/config.go", "symbol_name": "Load"}
+    ]
+  },
+  {
+    "category": "natural_config",
+    "name": "env_default_values",
+    "question": "项目里这些模型、TopK、超时时间不配置时，默认值是在哪里设置的？",
+    "relevant": [
+      {"file_path": "internal/config/config.go", "symbol_name": "Load"},
+      {"file_path": "internal/config/config.go", "symbol_name": "getenvInt"},
+      {"file_path": "internal/config/config.go", "symbol_name": "getenvBool"}
+    ]
+  },
+  {
+    "category": "natural_api",
+    "name": "ask_request_repo_id",
+    "question": "问答接口为什么需要 repository_id，这个 ID 是怎么从前面的仓库导入流程传过来的？",
+    "relevant": [
+      {"file_path": "internal/handler/repo.go", "symbol_name": "createRepository"},
+      {"file_path": "internal/handler/ask.go", "symbol_name": "ask"},
+      {"file_path": "internal/service/answer.go", "symbol_name": "Ask"}
+    ]
+  },
+  {
+    "category": "natural_impact",
+    "name": "impact_local_fallback",
+    "question": "影响分析如果大模型调用失败，系统还能不能给出基础的风险和测试建议？",
+    "relevant": [
+      {"file_path": "internal/service/impact.go", "symbol_name": "Analyze"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "localImpact"},
+      {"file_path": "internal/service/impact.go", "symbol_name": "inferTests"}
+    ]
+  },
+  {
+    "category": "natural_embedding",
+    "name": "local_embedding_fallback_reason",
+    "question": "为什么项目里还保留了本地 embedding fallback，它和远程 embedding 有什么关系？",
+    "relevant": [
+      {"file_path": "internal/service/embedder.go", "symbol_name": "EmbedBatch"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "embedLocal"},
+      {"file_path": "internal/service/embedder.go", "symbol_name": "tokenizeForEmbedding"}
+    ]
   }
 ]
