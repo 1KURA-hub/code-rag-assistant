@@ -33,7 +33,7 @@ type searchFeatures struct {
 	Languages   []string
 }
 
-const defaultRRFK = 60.0
+const defaultRRFK = 40.0
 
 type Retriever struct {
 	db       *gorm.DB
