@@ -16,6 +16,7 @@ func RegisterRoutes(router *gin.Engine, ingest *service.IngestService, answer *s
 	app := &App{ingest: ingest, answer: answer, impact: impact}
 	api := router.Group("/api")
 	api.POST("/repos", app.createRepository)
+	api.POST("/repos/ensure", app.ensureRepository)
 	api.GET("/repos/:id", app.getRepository)
 	api.POST("/ask", app.ask)
 	api.POST("/ask/stream", app.askStream)

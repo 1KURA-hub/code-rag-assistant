@@ -48,7 +48,8 @@ const statusText = {
 };
 
 const repoIDStorageKey = "code-rag-assistant.repo-id";
-const defaultRepoID = "1";
+const defaultRepoURL = "https://github.com/1KURA-hub/code-rag-assistant";
+const defaultRepoID = "";
 
 function createMessageID() {
   if (window.crypto?.randomUUID) {
@@ -143,7 +144,7 @@ function PixelIcon({ name, label }) {
 }
 
 function App() {
-  const [repoURL, setRepoURL] = useState("https://github.com/1KURA-hub/course-select");
+  const [repoURL, setRepoURL] = useState(defaultRepoURL);
   const [repo, setRepo] = useState(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -171,9 +172,9 @@ function App() {
   useEffect(() => {
     const savedRepoID = window.localStorage.getItem(repoIDStorageKey) || defaultRepoID;
     setStatusMessage("正在加载已索引仓库...");
-    refreshRepo(savedRepoID).catch(() => {
+    loadInitialRepo(savedRepoID).catch((err) => {
       window.localStorage.removeItem(repoIDStorageKey);
-      setStatusMessage("请先导入一个公开 GitHub 仓库。");
+      setStatusMessage(err.message || "请先导入一个公开 GitHub 仓库。");
     });
   }, []);
 
@@ -228,6 +229,36 @@ function App() {
     const json = await readJSON(response);
     if (!response.ok) throw new Error(json.error || `请求失败，HTTP ${response.status}`);
     return json;
+  }
+
+  function isDefaultRepo(nextRepo) {
+    return String(nextRepo?.repo_url || "").toLowerCase().includes("1kura-hub/code-rag-assistant");
+  }
+
+  async function ensureDefaultRepo() {
+    const nextRepo = await request("/api/repos/ensure", { repo_url: defaultRepoURL });
+    setRepo(nextRepo);
+    setRepoURL(nextRepo.repo_url || defaultRepoURL);
+    window.localStorage.setItem(repoIDStorageKey, String(nextRepo.id));
+    setStatusMessage(`仓库 #${nextRepo.id}: ${renderStatus(nextRepo.status)}${nextRepo.error_message ? " - " + nextRepo.error_message : ""}`);
+    return nextRepo;
+  }
+
+  async function loadInitialRepo(savedRepoID) {
+    if (!savedRepoID) return ensureDefaultRepo();
+    try {
+      const savedRepo = await fetchRepo(savedRepoID);
+      if (isDefaultRepo(savedRepo)) {
+        setRepo(savedRepo);
+        setRepoURL(savedRepo.repo_url || defaultRepoURL);
+        window.localStorage.setItem(repoIDStorageKey, String(savedRepo.id));
+        setStatusMessage(`仓库 #${savedRepo.id}: ${renderStatus(savedRepo.status)}${savedRepo.error_message ? " - " + savedRepo.error_message : ""}`);
+        return savedRepo;
+      }
+    } catch {
+      // Fall through to the default RAG repository.
+    }
+    return ensureDefaultRepo();
   }
 
   async function readJSON(response) {
@@ -344,10 +375,7 @@ function App() {
     let activeRepo = repo;
     if (!activeRepo?.id) {
       try {
-        activeRepo = await fetchRepo(window.localStorage.getItem(repoIDStorageKey) || defaultRepoID);
-        setRepo(activeRepo);
-        setRepoURL(activeRepo.repo_url || repoURL);
-        window.localStorage.setItem(repoIDStorageKey, String(activeRepo.id));
+        activeRepo = await loadInitialRepo(window.localStorage.getItem(repoIDStorageKey) || defaultRepoID);
       } catch (err) {
         setStatusMessage(err.message);
       }
@@ -968,7 +996,7 @@ function EvidenceDrawer({ citations, intent, open, size, onSizeChange, onClose }
               {fullscreen ? <Shrink size={16} /> : <Expand size={16} />}
               {fullscreen ? "退出" : "全屏"}
             </button>
-            <button className="icon-button" onClick={onClose} title="关闭代码依据">
+            <button className="icon-button evidence-close-button" onClick={onClose} title="关闭代码依据">
               <PixelIcon name="close" />
             </button>
           </div>
@@ -1012,7 +1040,7 @@ function CodePreviewModal({ item, onClose }) {
             <h3>{item.symbol_name || "未命名代码片段"}</h3>
             <p>{item.file_path}:{item.start_line}-{item.end_line}</p>
           </div>
-          <button className="icon-button" onClick={onClose} title="关闭预览">
+          <button className="icon-button preview-close-button" onClick={onClose} title="关闭预览">
             <PixelIcon name="close" />
           </button>
         </header>

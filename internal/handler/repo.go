@@ -25,6 +25,20 @@ func (a *App) createRepository(c *gin.Context) {
 	c.JSON(http.StatusOK, repo)
 }
 
+func (a *App) ensureRepository(c *gin.Context) {
+	var req createRepoRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.RepoURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repo_url is required"})
+		return
+	}
+	repo, err := a.ingest.Ensure(c.Request.Context(), req.RepoURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, repo)
+}
+
 func (a *App) getRepository(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {

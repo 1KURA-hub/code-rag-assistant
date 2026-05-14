@@ -83,6 +83,36 @@ func (s *IngestService) CreateAndIndex(ctx context.Context, repoURL string) (*mo
 	return &repo, nil
 }
 
+func (s *IngestService) Ensure(ctx context.Context, repoURL string) (*model.Repository, error) {
+	ref, err := s.fetcher.Parse(repoURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var repo model.Repository
+	err = s.db.WithContext(ctx).Where("owner = ? AND name = ?", ref.Owner, ref.Name).First(&repo).Error
+	if err == nil {
+		s.setRepoCache(ctx, &repo)
+		return &repo, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	repo = model.Repository{
+		RepoURL: repoURL,
+		Owner:   ref.Owner,
+		Name:    ref.Name,
+		Status:  "pending",
+	}
+	if err := s.db.WithContext(ctx).Create(&repo).Error; err != nil {
+		return nil, err
+	}
+	s.deleteRepoCache(ctx, repo.ID)
+	go s.index(context.Background(), repo.ID, ref)
+	return &repo, nil
+}
+
 func (s *IngestService) Get(ctx context.Context, id uint) (*model.Repository, error) {
 	if repo, ok := s.getRepoCache(ctx, id); ok {
 		return repo, nil

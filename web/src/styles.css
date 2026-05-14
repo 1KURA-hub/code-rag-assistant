@@ -368,6 +368,20 @@ button {
   transform: translateY(4px);
 }
 
+.evidence-fullscreen .evidence-close-button,
+.preview-close-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+.evidence-fullscreen .evidence-close-button .pixel-icon-close,
+.preview-close-button .pixel-icon-close {
+  font-size: 20px;
+  font-weight: 950;
+  transform: translateY(2px);
+}
+
 .text-button {
   min-height: 38px;
   display: inline-flex;
@@ -817,7 +831,7 @@ button {
 
 .message-label {
   display: inline-flex;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
@@ -841,7 +855,8 @@ button {
 .streaming-placeholder {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  margin-top: 2px;
   color: var(--muted);
 }
 
@@ -864,12 +879,12 @@ button {
 .dots {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .dots i {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--primary);
   animation: dot-bounce 1s ease-in-out infinite;
