@@ -838,6 +838,24 @@ button {
   color: var(--muted);
 }
 
+.streaming-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 16px;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--accent);
+  border-radius: 4px;
+  animation: cursor-blink 0.8s steps(2, start) infinite;
+}
+
 .message-end {
   height: 1px;
   scroll-margin-bottom: 128px;
@@ -863,6 +881,10 @@ button {
 
 .dots i:nth-child(3) {
   animation-delay: .24s;
+}
+
+@keyframes cursor-blink {
+  50% { opacity: 0; }
 }
 
 @keyframes pixel-blink {

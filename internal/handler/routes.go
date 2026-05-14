@@ -18,5 +18,6 @@ func RegisterRoutes(router *gin.Engine, ingest *service.IngestService, answer *s
 	api.POST("/repos", app.createRepository)
 	api.GET("/repos/:id", app.getRepository)
 	api.POST("/ask", app.ask)
+	api.POST("/ask/stream", app.askStream)
 	api.POST("/impact", app.impactAnalyze)
 }

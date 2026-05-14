@@ -23,6 +23,14 @@ type AskResponse struct {
 	Citations []Citation `json:"citations"`
 }
 
+type AskStreamEvent struct {
+	Type      string     `json:"type"`
+	Delta     string     `json:"delta,omitempty"`
+	Answer    string     `json:"answer,omitempty"`
+	Citations []Citation `json:"citations,omitempty"`
+	Error     string     `json:"error,omitempty"`
+}
+
 func NewAnswerService(db *gorm.DB, retriever *Retriever, cfg config.Config) *AnswerService {
 	return &AnswerService{db: db, retriever: retriever, cfg: cfg}
 }
@@ -43,6 +51,48 @@ func (s *AnswerService) Ask(ctx context.Context, repositoryID uint, question str
 		answer = generated
 	}
 	return &AskResponse{Answer: answer, Citations: citations}, nil
+}
+
+func (s *AnswerService) AskStream(ctx context.Context, repositoryID uint, question string, emit func(AskStreamEvent) error) error {
+	if err := s.ensureReady(ctx, repositoryID); err != nil {
+		return err
+	}
+	citations, err := s.retriever.Search(ctx, repositoryID, question, nil)
+	if err != nil {
+		return err
+	}
+	if err := emit(AskStreamEvent{Type: "citations", Citations: citations}); err != nil {
+		return err
+	}
+	if len(citations) == 0 {
+		answer := "没有检索到相关代码片段。"
+		if err := emit(AskStreamEvent{Type: "answer", Answer: answer}); err != nil {
+			return err
+		}
+		return emit(AskStreamEvent{Type: "done", Answer: answer})
+	}
+
+	local := s.localAnswer(question, citations)
+	if s.cfg.OpenAIAPIKey == "" {
+		if err := emit(AskStreamEvent{Type: "answer", Answer: local}); err != nil {
+			return err
+		}
+		return emit(AskStreamEvent{Type: "done", Answer: local})
+	}
+
+	answer, err := streamLLM(ctx, s.cfg, codeAnswerSystemPrompt(), codeAnswerUserPrompt(s.cfg, question, citations), func(delta string) error {
+		return emit(AskStreamEvent{Type: "delta", Delta: delta})
+	})
+	if err != nil {
+		if strings.TrimSpace(answer) == "" {
+			if emitErr := emit(AskStreamEvent{Type: "answer", Answer: local}); emitErr != nil {
+				return emitErr
+			}
+			return emit(AskStreamEvent{Type: "done", Answer: local})
+		}
+		return err
+	}
+	return emit(AskStreamEvent{Type: "done", Answer: answer})
 }
 
 func (s *AnswerService) ensureReady(ctx context.Context, repositoryID uint) error {

@@ -47,6 +47,17 @@ func NewRetriever(db *gorm.DB, embedder *Embedder, cfg config.Config) *Retriever
 
 func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string, hints []string) ([]Citation, error) {
 	plan := buildQueryPlan(ctx, r.cfg, query, hints)
+	keywordLimit := r.cfg.TopK * 2
+	type searchResult struct {
+		rows []Citation
+		err  error
+	}
+	keywordCh := make(chan searchResult, 1)
+	go func() {
+		rows, err := r.keywordSearch(ctx, repositoryID, plan.Features, keywordLimit)
+		keywordCh <- searchResult{rows: rows, err: err}
+	}()
+
 	embedding, err := r.embedder.Embed(ctx, plan.EmbeddingText)
 	if err != nil {
 		return nil, err
@@ -60,11 +71,11 @@ func (r *Retriever) Search(ctx context.Context, repositoryID uint, query string,
 	if err != nil {
 		return nil, err
 	}
-	keywordRows, err := r.keywordSearch(ctx, repositoryID, plan.Features, r.cfg.TopK*2)
-	if err != nil {
-		return nil, err
+	keywordResult := <-keywordCh
+	if keywordResult.err != nil {
+		return nil, keywordResult.err
 	}
-	rows = fuseCitationsRRF(r.cfg.RRFK, rows, keywordRows)
+	rows = fuseCitationsRRF(r.cfg.RRFK, rows, keywordResult.rows)
 	if len(rows) > r.cfg.TopK {
 		rows = rows[:r.cfg.TopK]
 	}

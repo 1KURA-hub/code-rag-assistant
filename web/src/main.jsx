@@ -149,6 +149,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [activeCitations, setActiveCitations] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [streamingAssistantID, setStreamingAssistantID] = useState(null);
   const [statusMessage, setStatusMessage] = useState("可以导入一个公开 GitHub 仓库。");
   const [theme, setTheme] = useState("light");
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
@@ -242,6 +243,67 @@ function App() {
     }
   }
 
+  async function streamAsk(body, assistantID) {
+    const response = await fetch("/api/ask/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok || !response.body) {
+      const json = await readJSON(response);
+      throw new Error(json.error || `请求失败，HTTP ${response.status}`);
+    }
+
+    const decoder = new TextDecoder();
+    const reader = response.body.getReader();
+    let buffer = "";
+    let finalAnswer = "";
+
+    async function handleLine(line) {
+      if (!line.trim()) return;
+      const event = JSON.parse(line);
+      if (event.type === "error") {
+        throw new Error(event.error || "流式回答失败");
+      }
+      if (event.type === "citations") {
+        const citations = event.citations || [];
+        updateAssistant(assistantID, { citations });
+        setActiveCitations(citations);
+        return;
+      }
+      if (event.type === "delta") {
+        finalAnswer += event.delta || "";
+        appendAssistantDelta(assistantID, event.delta || "");
+        return;
+      }
+      if (event.type === "answer") {
+        finalAnswer = event.answer || finalAnswer;
+        updateAssistant(assistantID, { content: finalAnswer });
+        return;
+      }
+      if (event.type === "done") {
+        finalAnswer = event.answer || finalAnswer;
+        updateAssistant(assistantID, { content: finalAnswer || "暂无回答。", streaming: false });
+      }
+    }
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        await handleLine(line);
+      }
+    }
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      await handleLine(buffer);
+    }
+    updateAssistant(assistantID, { content: finalAnswer || "暂无回答。", streaming: false });
+  }
+
   async function fetchRepo(repoID) {
     if (!repoID) return;
     const response = await fetch(`/api/repos/${repoID}`);
@@ -327,17 +389,56 @@ function App() {
         });
         appendAssistant(formatImpact(data), data.citations || [], "impact");
       } else {
-        const data = await request("/api/ask", {
-          repository_id: activeRepo.id,
-          question: value
-        });
-        appendAssistant(data.answer || "暂无回答。", data.citations || [], "ask");
+        const assistantID = createMessageID();
+        setStreamingAssistantID(assistantID);
+        setMessages((items) => [...items, {
+          id: assistantID,
+          role: "assistant",
+          content: "",
+          citations: [],
+          type: "ask",
+          streaming: true
+        }]);
+        try {
+          await streamAsk({
+            repository_id: activeRepo.id,
+            question: value
+          }, assistantID);
+        } catch (streamErr) {
+          const data = await request("/api/ask", {
+            repository_id: activeRepo.id,
+            question: value
+          });
+          updateAssistant(assistantID, {
+            content: data.answer || streamErr.message || "暂无回答。",
+            citations: data.citations || [],
+            streaming: false
+          });
+          setActiveCitations(data.citations || []);
+          setLastIntent("ask");
+        } finally {
+          setStreamingAssistantID(null);
+        }
       }
     } catch (err) {
       appendAssistant(err.message, [], intent);
     } finally {
       setBusy(false);
+      setStreamingAssistantID(null);
     }
+  }
+
+  function updateAssistant(id, patch) {
+    setMessages((items) => items.map((item) => (
+      item.id === id ? { ...item, ...patch } : item
+    )));
+  }
+
+  function appendAssistantDelta(id, delta) {
+    if (!delta) return;
+    setMessages((items) => items.map((item) => (
+      item.id === id ? { ...item, content: `${item.content || ""}${delta}` } : item
+    )));
   }
 
   function appendAssistant(content, citations, type = "ask") {
@@ -472,7 +573,7 @@ function App() {
                 />
               ))
             )}
-            {busy && (
+            {busy && !streamingAssistantID && (
               <div className="message-row assistant-row">
                 <div className="avatar assistant-avatar"><AppMark size={24} /></div>
                 <div className="message assistant-message loading-message">
@@ -631,7 +732,13 @@ function MessageBubble({ message, onShowCitations }) {
       {!isUser && <div className="avatar assistant-avatar"><AppMark size={24} /></div>}
       <div className={`message ${isUser ? "user-message" : "assistant-message"}`}>
         {!isUser && <span className="message-label">{intentLabel}</span>}
-        <RichText content={message.content} />
+        {message.content ? <RichText content={message.content} /> : (
+          <div className="streaming-placeholder">
+            <span className="dots"><i /><i /><i /></span>
+            正在检索代码依据
+          </div>
+        )}
+        {!isUser && message.streaming && message.content && <span className="streaming-cursor" />}
         {!isUser && message.citations?.length > 0 && (
           <button className="citation-link" onClick={onShowCitations}>
             <PixelIcon name="file" />
