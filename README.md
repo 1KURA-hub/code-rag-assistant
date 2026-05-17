@@ -107,6 +107,22 @@ export EMBEDDING_PROVIDER="remote"
 
 未配置 API Key 时，embedding 会使用本地 hash fallback，便于跑通流程，但检索质量不等同于真实 embedding 模型。
 
+## CI/CD
+
+仓库内置 GitHub Actions：
+
+- Pull Request 和推送会自动执行测试与 Docker 镜像构建
+- `main` 分支推送通过后，会自动 SSH 到云服务器更新服务并检查 `/healthz`
+
+需要在 GitHub 仓库的 Actions Secrets 中配置：
+
+```text
+DEPLOY_HOST
+DEPLOY_USER
+DEPLOY_SSH_KEY
+DEPLOY_PORT  # 可选，默认 22
+```
+
 ## API
 
 ### 仓库
