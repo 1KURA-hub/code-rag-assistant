@@ -59,9 +59,7 @@ func BuildQueryPlan(ctx context.Context, cfg config.Config, query string, hints 
 		plan.RewriteError = err.Error()
 		return plan
 	}
-	mergeModelQueryPlan(&plan, modelPlan, cfg.QueryRewriteMaxTerms)
-	plan.RewriteUsed = true
-	return plan
+	return modelDrivenQueryPlan(query, hints, modelPlan, cfg.QueryRewriteMaxTerms)
 }
 
 func BuildQueryPlanSnapshot(ctx context.Context, cfg config.Config, query string, hints []string) QueryPlanSnapshot {
@@ -85,6 +83,17 @@ func localQueryPlan(query string, hints []string) QueryPlan {
 		EmbeddingText: expandQueryText(query, hints),
 		Features:      analyzeSearchFeatures(query, hints),
 	}
+}
+
+func modelDrivenQueryPlan(query string, hints []string, modelPlan modelQueryPlan, maxTerms int) QueryPlan {
+	plan := QueryPlan{
+		Original:      query,
+		EmbeddingText: explicitQueryText(query, hints),
+		Features:      analyzeExplicitSearchFeatures(query, hints),
+		RewriteUsed:   true,
+	}
+	mergeModelQueryPlan(&plan, modelPlan, maxTerms)
+	return plan
 }
 
 func callModelQueryPlan(ctx context.Context, cfg config.Config, query string, hints []string) (modelQueryPlan, error) {
@@ -146,7 +155,7 @@ func extractJSONObject(text string) string {
 
 func mergeModelQueryPlan(plan *QueryPlan, modelPlan modelQueryPlan, maxTerms int) {
 	if strings.TrimSpace(modelPlan.RewrittenQuery) != "" {
-		plan.EmbeddingText = strings.TrimSpace(modelPlan.RewrittenQuery) + "\n" + plan.EmbeddingText
+		plan.EmbeddingText = strings.TrimSpace(modelPlan.RewrittenQuery)
 	}
 	if maxTerms <= 0 {
 		maxTerms = 20
@@ -166,6 +175,16 @@ func mergeModelQueryPlan(plan *QueryPlan, modelPlan modelQueryPlan, maxTerms int
 	for _, value := range modelPlan.Languages {
 		addSearchLanguage(&plan.Features, value)
 	}
+}
+
+func explicitQueryText(query string, hints []string) string {
+	var b strings.Builder
+	b.WriteString(query)
+	for _, hint := range hints {
+		b.WriteByte('\n')
+		b.WriteString(hint)
+	}
+	return b.String()
 }
 
 func addLimitedStrings(values []string, max int, add func(string)) {

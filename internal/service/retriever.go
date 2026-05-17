@@ -179,6 +179,14 @@ func buildKeywordSearchQuery(repositoryID uint, features searchFeatures, limit i
 }
 
 func analyzeSearchFeatures(query string, hints []string) searchFeatures {
+	return analyzeSearchFeaturesWithAliases(query, hints, true)
+}
+
+func analyzeExplicitSearchFeatures(query string, hints []string) searchFeatures {
+	return analyzeSearchFeaturesWithAliases(query, hints, false)
+}
+
+func analyzeSearchFeaturesWithAliases(query string, hints []string, includeAliases bool) searchFeatures {
 	text := query + "\n" + strings.Join(hints, "\n")
 	rawTerms := splitSearchTerms(text)
 	features := searchFeatures{}
@@ -237,8 +245,10 @@ func analyzeSearchFeatures(query string, hints []string) searchFeatures {
 			addSymbol(term)
 		}
 	}
-	for _, alias := range matchedAliases(text) {
-		addTerm(alias)
+	if includeAliases {
+		for _, alias := range matchedAliases(text) {
+			addTerm(alias)
+		}
 	}
 	for _, symbolType := range detectSymbolTypes(text) {
 		addSymbolType(symbolType)
