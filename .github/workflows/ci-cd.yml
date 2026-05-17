@@ -57,5 +57,11 @@ jobs:
             cd /go-course/code-rag-assistant
             git pull --ff-only origin main
             docker compose up -d --build app
-            curl -fsS http://127.0.0.1:8090/healthz
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8090/healthz; then
+                exit 0
+              fi
+              sleep 2
+            done
+            exit 1
           EOF
