@@ -50,6 +50,7 @@ const statusText = {
 const repoIDStorageKey = "code-rag-assistant.repo-id";
 const defaultRepoURL = "https://github.com/1KURA-hub/code-rag-assistant";
 const defaultRepoID = "";
+const icpRecord = import.meta.env.VITE_ICP_RECORD || "";
 
 function createMessageID() {
   if (window.crypto?.randomUUID) {
@@ -644,6 +645,19 @@ function App() {
 
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
+      <SiteFooter record={icpRecord} />
+    </div>
+  );
+}
+
+function SiteFooter({ record }) {
+  if (!record) return null;
+
+  return (
+    <div className="site-footer">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
+        {record}
+      </a>
     </div>
   );
 }
